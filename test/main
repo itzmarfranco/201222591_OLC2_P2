@@ -1,0 +1,18 @@
+int main()
+{
+	int varMAIN = 100;
+	printf("Hola %d", a, func());
+	scanf("hoola%c", &t);
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+

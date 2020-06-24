@@ -1,3 +1,6 @@
+#gramática
+*.grm
+
 #conf files
 *.bak
 *.dat

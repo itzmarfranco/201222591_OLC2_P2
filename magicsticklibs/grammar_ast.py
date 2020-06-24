@@ -1,33 +1,21 @@
 from graphviz import Graph
-from graphviz import nohtml
 import re
+
+from graphviz import nohtml
 
 import os
 
 from graphviz import Digraph
 import pydotplus
 
-#from node import Node
-from SymbolTable import Table, Symbol
-from Error import Error, ErrorList
+i = 0
+def inc():
+    global i
+    i = i+1
+    return i
 
 
-import math
-
-ts = Table([])
-
-lexicalErrors = ErrorList([])
-syntacticErrors = ErrorList([])
-semanticErrors = ErrorList([])
-
-
-
-def analize(entrada):
-    
-    # clear previous results
-    lexicalErrors.clear()
-    syntacticErrors.clear()
-    semanticErrors.clear()
+def analizeAST(entrada):
 
     reserved = {
         'auto': 'AUTO',
@@ -126,18 +114,10 @@ def analize(entrada):
         'QUOTE_1', # '
         'QUOTE_2', # "
 
-        'SYMINT', # %d
-        'SYMFLOAT', # %f for float and doble
-        'SYMCHAR', # %c
-        'SYMSTRING', # %s
-
-
         'INTEGER', # 1 2 3...
         'DECIMAL', # 1.54...
         'STRING', # hello
         'CHARACTER' # p 
-
-
 
     ] + list(reserved.values())
 
@@ -250,8 +230,8 @@ def analize(entrada):
     def t_error(t):
         #print("Illegal characters!")
         t.lexer.skip(1)
-        error = Error('Caracter no permitido: '+ str(t.value[0]), t.lineno,0)
-        lexicalErrors.add(error)
+        #error = Error('Caracter no permitido: '+ str(t.value[0]), t.lineno,0)
+        #lexicalErrors.add(error)
 
     # Build the lexer
     log = []
@@ -270,24 +250,28 @@ def analize(entrada):
     #     ('right', 'UMINUS')
     # )
 
-    dot = Digraph(comment='AST')
+    #dot = Digraph(comment='AST')
+    dot = Graph(name='AST')
+    dot.attr(splines='false', rankdir="TBLR")
+    dot.node_attr.update(shape= 'rect')
+    dot.edge_attr.update(color= 'red', arrowhead = 'normal', arrowtail ="dot")
     # Define our grammar. We allow expressions, var_assign's and empty's.
     def p_Decls_1(p):
         '''
         Decls : Decl Decls
         '''
-        aux = []
-        aux.append(p[1])
-        aux.append(p[2])
-        p[0] = tuple(aux)
-        print(p[0])
-        #print('RECONOCIDO')
+        #print('AST')
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'DECLS')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[2]))
 
     def p_Decls_2(p):
         '''
         Decls : empty
         '''
-        p[0] = 'NoneDecls'
+        p[0] = None
 
     def p_Decl(p):
         '''
@@ -299,7 +283,10 @@ def analize(entrada):
             | Var_Decl    
             | Typedef_Decl
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'DECL')
+        dot.edge(str(id), str(p[1]))
 
     # ===================================================================
     # Function  Declaration
@@ -316,89 +303,132 @@ def analize(entrada):
         '''
         Func_Decl : Func_ID L_PAR Params  R_PAR Block
         '''
-        p[0] = (p[1], p[3], p[5])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'FUNC_DECL')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[3]))
+        dot.edge(str(id), str(p[5]))
 
     def p_Func_Decl_2(p):
         '''
         Func_Decl : Func_ID L_PAR Id_List R_PAR Struct_Def Block
         '''
-        p[0] = (p[1], p[3], p[5])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'FUNC_DECL')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[2]))
+        dot.edge(str(id), str(p[5]))
+        dot.edge(str(id), str(p[6]))
 
     def p_Func_Decl_3(p):
         '''
         Func_Decl : Func_ID L_PAR R_PAR Block
         '''
-        p[0] = (p[1], p[4])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'FUNC_DECL')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[4]))
 
     def p_Params_1(p):
         '''
         Params : Param COMMA Params
         '''
-        aux = []
-        aux.append(p[1])
-        aux.append(p[3])
-        p[0] = tuple(aux)
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'PARAMS')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[3]))
 
     def p_Params_2(p):
         '''
         Params : Param
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'PARAMS')
+        dot.edge(str(id), str(p[1]))
 
     def p_Param_1(p):
         '''
         Param : CONST Type NAME
         '''
-        p[0] = ('const', p[2], p[3])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'PARAM')
+        dot.edge(str(id), 'const')
+        dot.edge(str(id), str(p[2]))
+        dot.edge(str(id), str(p[3]))
 
     def p_Param_2(p):
         '''
         Param : Type NAME
         '''
-        p[0] = (p[1], p[2])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'PARAM')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[2]))
 
     def p_Types_1(p):
         '''
         Types : Type COMMA Types
         '''
-        aux = []
-        aux.append(p[1])
-        aux.append(p[3])
-        p[0] = tuple(aux)
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'TYPES')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[3]))
 
     def p_Types_2(p):
         '''
         Types : Type 
         '''
-        p[0] = p[1]
-
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'TYPES')
+        dot.edge(str(id), str(p[1]))
 
     def p_Id_List_1(p):
         '''
         Id_List : NAME COMMA Id_List
         '''
-        aux = []
-        aux.append(p[1])
-        aux.append(p[3])
-        p[0] = tuple(aux)
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'ID_LIST')
+        id = inc()
+        dot.node(str(id), str(p[1]))
+        dot.edge(str(id-1), str(p[3]))
 
     def p_Id_List_2(p):
         '''
         Id_List : NAME
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'ID_LIST')
+        dot.edge(str(id), str(p[1]))
 
     def p_Func_ID_1(p):
         '''
         Func_ID : Type NAME
         '''
-        p[0] =  (p[1], p[2])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'FUNC_ID')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[2]))
 
     def p_Func_ID_2(p):
         '''
         Func_ID : NAME
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'FUNC_ID')
+        dot.edge(str(id), str(p[1]))
 
     # ===================================================================
     # Type Declaration
@@ -414,29 +444,44 @@ def analize(entrada):
         '''
         Struct_Decl  : STRUCT NAME L_CURLY Struct_Def R_CURLY  SEMICOLON 
         '''
-        p[0] = ('struct', p[1], p[4])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'STRUCT_DECL')
+        id = inc()
+        dot.node(str(id), 'struct')
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[2]))
+        dot.edge(str(p[0]), str(p[4]))
 
     def p_Union_Decl(p):
         '''
         Union_Decl : UNION NAME L_CURLY Struct_Def R_CURLY  SEMICOLON 
         '''
-        p[0] = ('union', p[1], p[3])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'UNION_DECL')
+        dot.edge(str(id), 'union')
+        dot.edge(str(id), str(p[2]))
+        dot.edge(str(id), str(p[4]))
 
     def p_Struct_Def_1(p):
         '''
         Struct_Def : Var_Decl Struct_Def
         '''
-        aux = []
-        aux.append(p[1])
-        aux.append(p[2])
-        p[0] = tuple(aux)
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'STRUCT_DEF')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[2]))
 
     def p_Struct_Dec2(p):
         '''
         Struct_Def : Var_Decl
         '''
-        p[0] = p[1]
-
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'STRUCT_DEF')
+        dot.edge(str(id), str(p[1]))
 
     # ===================================================================
     # Variable Declaration
@@ -446,79 +491,102 @@ def analize(entrada):
         '''
         Var_Decl : Mod Type Var Var_List  SEMICOLON
         '''
-        aux = []
-        aux.append(p[3])
-        aux.append(p[4])
-        p[0] = (p[1], tuple(aux))
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'VAR_DECL')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[2]))
+        dot.edge(str(id), str(p[3]))
+        dot.edge(str(id), str(p[4]))
 
     def p_Var_Decl_2(p):
         '''
         Var_Decl : Type Var Var_List SEMICOLON
         '''
-        aux = []
-        aux.append(p[2])
-        aux.append(p[3])
-        p[0] = (p[1], tuple(aux))
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'VAR_DECL')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[2]))
+        dot.edge(str(id), str(p[3]))
 
     def p_Var_Decl_3(p):
         '''
         Var_Decl : Mod Var Var_List SEMICOLON
         '''
-        aux = []
-        aux.append(p[2])
-        aux.append(p[3])
-        p[0] = (p[1], tuple(aux))
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'VAR_DECL')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[2]))
+        dot.edge(str(id), str(p[3]))
 
     def p_Var_1(p):
         '''
         Var : NAME Array
         '''
-        p[0] = (p[1], p[2])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'VAR')
+        id = inc()
+        dot.node(str(id), str(p[1]))
+        dot.edge(str(p[0]), str(id))
     
     def p_Var_2(p):
         '''
         Var : NAME Array ASSIGN Op_If
         '''
-        p[0] = ('=',  p[1], p[2], p[4])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'VAR =')
+        id = inc()
+        dot.node(str(id), str(p[1]))
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[4]))
 
     def p_Array_1(p):
         '''
         Array    : L_BRACKET Expr R_BRACKET
         '''
-        p[0] = p[2]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'ARRAY')
+        dot.edge(str(id), '[')
+        dot.edge(str(id), str(p[2]))
+        dot.edge(str(id), ']')
     
     def p_Array_2(p):
         '''
         Array : L_BRACKET R_BRACKET
+            | empty
         '''
-        p[0] = ('[]')
-
-    def p_Array_3(p):
-        '''
-        Array : empty
-        '''
-        p[0] = 'NoneArray'
+        p[0] = None
 
     def p_Var_List_1(p):
         '''
         Var_List :  COMMA Var_Item Var_List
         '''
-        aux = []
-        aux.append(p[2])
-        aux.append(p[3])
-        p[0] = tuple(aux)
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'VAR_LIST')
+        dot.edge(str(id), str(p[2]))
+        dot.edge(str(id), str(p[3]))
 
     def p_Var_List_2(p):
         '''
         Var_List : empty
         '''
-        p[0] = 'NoneVarList'
+        p[0] = None
 
     def p_Var_Item(p):
         '''
         Var_Item : Pointers Var
         '''
-        p[0] = (p[1], p[2])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'VAR_ITEM')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[2]))
 
     def p_Mod(p):
         '''
@@ -529,7 +597,10 @@ def analize(entrada):
             | VOLATILE
             | CONST
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'MOD')
+        dot.edge(str(id), str(p[1]))
 
     # ===================================================================
     # Enumerations
@@ -539,35 +610,51 @@ def analize(entrada):
         '''
         Enum_Decl : ENUM NAME L_CURLY Enum_Def R_CURLY SEMICOLON
         '''
-        p[0] = ('enum', p[2], p[4])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'ENUM_DECL')
+        dot.edge(str(id), 'enum')
+        dot.edge(str(id), str(p[2]))
+        dot.edge(str(id), str(p[4]))
 
     def p_Enum_Def_1(p):
         '''
         Enum_Def : Enum_Val COMMA Enum_Def
         '''
-        aux = []
-        aux.append(p[1])
-        aux.append(p[3])
-        p[0] = tuple(aux)
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'ENUM_DEF')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[3]))
 
     def p_Enum_Def_2(p):
         '''
         Enum_Def : Enum_Val
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'ENUM_DEF')
+        dot.edge(str(id), str(p[1]))
 
     def p_Enum_Val_1(p):
         '''
         Enum_Val : NAME
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'ENUM_VAL')
+        dot.edge(str(id), str(p[1]))
 
     def p_Enum_Val_2(p):
         '''
         Enum_Val : NAME ASSIGN INTEGER
         '''
-        p[0] = ('=', p[1], p[3])
-
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'ENUM_VAL')
+        dot.edge(str(id), '=')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[3]))
 
     # ===================================================================
     # Types
@@ -577,56 +664,87 @@ def analize(entrada):
         '''
         Type : Base Pointers 
         '''
-        p[0] = (p[1], p[2])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'TYPE')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[2]))
 
     def p_Base_1(p):
         '''
         Base : Sign Scalar
         '''
-        p[0] = (p[1], p[2])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'BASE')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[2]))
 
     def p_Base_2(p):
         '''
         Base : STRUCT NAME 
         '''
-        p[0] = ('struct', p[2])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'BASE')
+        dot.edge(str(id), 'struct')
+        dot.edge(str(id), str(p[1]))
 
     def p_Base_3(p):
         '''
         Base : STRUCT L_CURLY Struct_Def R_CURLY            
         '''
-        p[0] = ('struct', p[3])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'BASE')
+        dot.edge(str(id), 'struct')
+        dot.edge(str(id), str(p[3]))
 
     def p_Base_4(p):
         '''
         Base : UNION NAME
         '''
-        p[0] = ('union', p[2])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'BASE')
+        dot.edge(str(id), 'union')
+        dot.edge(str(id), str(p[2]))
 
     def p_Base_5(p):
         '''
         Base : UNION L_CURLY Struct_Def R_CURLY 
         '''
-        p[0] = ('union', p[3])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'BASE')
+        dot.edge(str(id), 'union')
+        dot.edge(str(id), str(p[3]))
 
     def p_Base_6(p):
         '''
         Base : ENUM NAME 
         '''
-        p[0] = ('enum', p[2])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'BASE')
+        dot.edge(str(id), 'enum')
+        dot.edge(str(id), str(p[2]))
 
     def p_Sign_1(p):
         '''
         Sign : SIGNED
             | UNSIGNED
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'SIGN')
+        dot.edge(str(id), str(p[1]))
 
     def p_Sign_2(p):
         '''
         Sign : empty
         '''
-        p[0] = 'NoneSign'
+        p[0] = None
 
     def p_Scalar(p):
         '''
@@ -636,46 +754,61 @@ def analize(entrada):
             | DOUBLE
             | VOID  
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'SCALAR')
+        id = inc()
+        dot.node(str(id), str(p[1]) )
+        dot.edge(str(id-1), str(id))
 
     def p_Pointers_1(p):
         '''
         Pointers : MULTIPLY Pointers
         '''
-        aux = []
-        aux.append(p[1])
-        aux.append(p[2])
-        p[0] = tuple(aux)
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'POINTERS')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[2]))
 
     def p_Pointers_2(p):
         '''
         Pointers : empty
         '''
-        p[0] = 'NonePointers'
+        p[0] = None
 
     # ===================================================================
     # Statements
     # ===================================================================
+
     def p_Stm_0(p):
         '''
         Stm : PRINTF L_PAR STRING Printf_Params R_PAR SEMICOLON
         '''
-        p[0] = ('printf', p[3], p[4])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'PRINTF')
+        dot.edge(str(id), str(p[4]))
 
     def p_Printf_Params_1(p):
         '''
         Printf_Params : COMMA Printf_Param  Printf_Params
         '''
-        aux = []
-        aux.append(p[2])
-        aux.append(p[3])
-        p[0] = tuple(aux)
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'PRINTF_PARAMS')
+        dot.edge(str(id), str(p[2]))
+        dot.edge(str(id), str(p[3]))
+        
 
     def p_Printf_Params_2(p):
         '''
         Printf_Params : Printf_Param
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'PRINTF_PARAMS')
+        dot.edge(str(id), str(p[1]))
 
     def p_Printf_Params_3(p):
         '''
@@ -687,25 +820,40 @@ def analize(entrada):
         '''
         Printf_Param : Value
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'PRINTF_PARAM')
+        dot.edge(str(id), str(p[1]))
 
     def p_Stm_01(p):
         '''
         Stm : SCANF L_PAR STRING COMMA Scanf_Param R_PAR SEMICOLON
         '''
-        p[0] = ('scanf', p[3], p[5])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'SCANF')
+        dot.edge(str(id), str(p[3]))
+        dot.edge(str(id), str(p[5]))
 
     def p_Scanf_Param_1(p):
         '''
         Scanf_Param : AND_B NAME
         '''
-        p[0] = ('&', p[2])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'SCANF_PARAM &')
+        dot.edge(str(id), p[2])
 
     def p_Scanf_Param_2(p):
         '''
         Scanf_Param : NAME
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'SCANF_PARAM')
+        id = inc()
+        dot.node(str(id), p[1])
+        dot.edge(p[0], str(id))
 
 ########
 
@@ -713,173 +861,261 @@ def analize(entrada):
         '''
         Stm : Var_Decl
         '''
-        p[0] = p[1]
-
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'STM')
+        dot.edge(str(id), str(p[1]))
+        
     def p_Stm_2(p):
         '''
         Stm : NAME COLON
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'STM')
+        dot.edge(str(id), str(p[1]))
 
     def p_Stm_3(p):
         '''
         Stm : IF L_PAR Expr R_PAR Then_Stm ELSE Stm
         '''
-        p[0] = ('if', p[3], p[5], 'else', p[7])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'STM IF ELSE')
+        dot.edge(str(id), str(p[3]))
+        dot.edge(str(id), str(p[5]))
+        dot.edge(str(id), str(p[7]))
 
     def p_Stm_7(p):
         '''
         Stm : IF L_PAR Expr R_PAR Stm
         '''
-        p[0] = ('if', p[3], p[5])
-
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'STM IF')
+        dot.edge(str(id), str(p[3]))
+        dot.edge(str(id), str(p[5]))
 
     def p_Stm_4(p):
         '''
         Stm : WHILE L_PAR Expr R_PAR Stm 
         '''
-        p[0] = ('while', p[3], p[5])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'STM WHILE')
+        dot.edge(str(id), str(p[3]))
+        dot.edge(str(id), str(p[5]))
 
     def p_Stm_5(p):
         '''
         Stm : FOR L_PAR Arg SEMICOLON Arg SEMICOLON Arg R_PAR Stm
         '''
-        p[0] = ('for', p[3], p[5], p[7], p[9])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'STM FOR')
+        dot.edge(str(id), str(p[3]))
+        dot.edge(str(id), str(p[5]))
+        dot.edge(str(id), str(p[7]))
+        dot.edge(str(id), str(p[9]))
     
     def p_Stm_6(p):
         '''
         Stm : Normal_Stm
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'STM')
+        dot.edge(str(id), str(p[1]))
 
     def p_Then_Stm_1(p):
         '''
         Then_Stm : IF L_PAR Expr R_PAR Then_Stm ELSE Then_Stm 
         '''
-        p[0] = ('if', p[3], p[5], 'else', p[7])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'THEN_STM IF ELSE')
+        dot.edge(str(id), str(p[3]))
+        dot.edge(str(id), str(p[5]))
+        dot.edge(str(id), str(p[7]))
 
     def p_Then_Stm_2(p):
         '''
         Then_Stm : WHILE L_PAR Expr R_PAR Then_Stm 
         '''
-        p[0] = ('while', p[3], p[5])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'THEN_STM WHILE')
+        dot.edge(str(id), str(p[3]))
+        dot.edge(str(id), str(p[5]))
 
     def p_Then_Stm_3(p):
         '''
         Then_Stm : FOR L_PAR Arg SEMICOLON Arg SEMICOLON Arg R_PAR Then_Stm
         '''
-        p[0] = ('for', p[3], p[5], p[7], p[9])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'THEN_STM FOR')
+        dot.edge(str(id), str(p[3]))
+        dot.edge(str(id), str(p[5]))
+        dot.edge(str(id), str(p[7]))
+        dot.edge(str(id), str(p[9]))
 
     def p_Then_Stm_4(p):
         '''
         Then_Stm : Normal_Stm
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'THEN_STM')
+        dot.edge(str(id), str(p[1]))
 
     def p_Normal_Stm_1(p):
         '''
         Normal_Stm : DO Stm WHILE L_PAR Expr R_PAR            
         '''
-        p[0] = ('do', p[2], p[5])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'NORMAL_STM DO WHILE')
+        dot.edge(str(id), str(p[2]))
+        dot.edge(str(id), str(p[5]))
 
     def p_Normal_Stm_2(p):
         '''
         Normal_Stm : SWITCH L_PAR Expr R_PAR L_CURLY Case_Stms R_CURLY         
         '''
-        p[0] = ('switch', p[3], p[6])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'NORMAL_STM SWITCH')
+        dot.edge(str(id), str(p[3]))
+        dot.edge(str(id), str(p[6]))
 
     def p_Normal_Stm_3(p):
         '''
         Normal_Stm : Block             
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'NORMAL_STM')
+        dot.edge(str(id), str(p[1]))
 
     def p_Normal_Stm_4(p):
         '''
         Normal_Stm : Expr SEMICOLON
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'NORMAL_STM')
+        dot.edge(str(id), str(p[1]))
 
     def p_Normal_Stm_5(p):
         '''
         Normal_Stm : GOTO NAME SEMICOLON
         '''
-        p[0] = ('goto', p[2])
-
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'NORMAL_STM GOTO')
+        dot.edge(str(id), str(p[2]))
+        
     def p_Normal_Stm_6(p):
         '''
         Normal_Stm : BREAK SEMICOLON
         '''
-        p[0] = ('break')
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'NORMAL_STM BREAK')
 
     def p_Normal_Stm_7(p):
         '''
         Normal_Stm : CONTINUE SEMICOLON
         '''
-        p[0] = ('continue')
-
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'NORMAL_STM CONTINUE')
+        
     def p_Normal_Stm_8(p):
         '''
         Normal_Stm : RETURN Expr SEMICOLON
         '''
-        p[0] = ('return', p[2])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'NORMAL_STM RETURN')
+        dot.edge(str(p[0]), str(p[2]))
 
     def p_Normal_Stm_9(p):
         '''
         Normal_Stm : SEMICOLON
         '''
-        p[0] = ';'
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'NORMAL_STM ;')
 
     def p_Arg_1(p):
         '''
         Arg : Expr 
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'ARG')
+        dot.edge(str(id), str(p[1]))
 
     def p_Arg_2(p):
         '''
         Arg : empty
         '''
-        p[0] = 'NoneArg'
+        p[0] = None
 
     def p_Case_Stms_1(p):
         '''
         Case_Stms : CASE Value COLON Stm_List Case_Stms
         '''
-        p[0] = ('case', p[2], p[4], p[5])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'CASE_STMS')
+        dot.edge(str(id), 'case')
+        dot.edge(str(id), str(p[2]))
+        dot.edge(str(id), str(p[4]))
+        dot.edge(str(id), str(p[5]))
 
     def p_Case_Stms_2(p):
         '''
         Case_Stms : DEFAULT COLON Stm_List                  
         '''
-        p[0] = ('default', p[3])
-
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'CASE_STMS')
+        dot.edge(str(id), 'default')
+        dot.edge(str(id), str(p[3]))
+        
     def p_Case_Stms_3(p):
         '''
         Case_Stms : empty
         '''
-        p[0] = 'NoneCaseStm'
+        p[0] = None
 
     def p_Block(p):
         '''
         Block : L_CURLY Stm_List R_CURLY
         '''
-        p[0] = p[2]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'BLOCK')
+        dot.edge(str(id), str(p[2]))
 
     def p_Stm_List_1(p):
         '''
         Stm_List  :  Stm Stm_List 
         '''
-        aux = []
-        aux.append(p[1])
-        aux.append(p[2])
-        p[0] = tuple(aux)
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'STM_LIST')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[2]))
 
     def p_Stm_List_2(p):
         '''
         Stm_List  :  empty  
         '''
-        p[0] = 'NoneStmList'
+        p[0] = None
 
 
     # ===================================================================
@@ -890,120 +1126,224 @@ def analize(entrada):
         '''
         Expr : Expr COMMA Op_Assign
         '''
-        p[0] = (p[1], p[3]) # NOT SUPPORTED BY MINORC
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'EXPR')
+        dot.edge(str(id), str(p[1]))
+        dot.edge(str(id), str(p[3]))
 
     def p_Expr_2(p):
         '''
         Expr : Op_Assign
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'EXPR')
+        dot.edge(str(id), str(p[1]))
+
 
     def p_Op_Assign_1(p):
         '''
         Op_Assign  : Op_If ASSIGN Op_Assign
-            | Op_If APLUS Op_Assign
-            | Op_If AMINUS Op_Assign
-            | Op_If AMULTIPLY Op_Assign
-            | Op_If ADIVIDE Op_Assign
-            | Op_If AXOR Op_Assign
-            | Op_If AAND Op_Assign
-            | Op_If AOR Op_Assign
-            | Op_If ASHIFT_R Op_Assign
-            | Op_If ASHIFT_L Op_Assign
+                    | Op_If APLUS Op_Assign
+                    | Op_If AMINUS Op_Assign
+                    | Op_If AMULTIPLY Op_Assign
+                    | Op_If ADIVIDE Op_Assign
+                    | Op_If AXOR Op_Assign
+                    | Op_If AAND Op_Assign
+                    | Op_If AOR Op_Assign
+                    | Op_If ASHIFT_R Op_Assign
+                    | Op_If ASHIFT_L Op_Assign
         '''
-        p[0] = (p[2], p[1], p[3])
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'OP_ASSIGN')
+        
+        id=inc()
+        dot.node(str(id), str(p[2]))
+
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[3]))
 
     def p_Op_Assign_2(p):
         '''
         Op_Assign : Op_If
         '''
-        p[0] = p[1]
+        id = inc()
+        p[0] = id
+        dot.node(str(id), 'OP_ASSIGN')
+        dot.edge(str(id), str(p[1]))
 
     def p_Op_If_1(p):
         '''
         Op_If : Op_Or QUESTION Op_If COLON Op_If
         '''
-        p[0] = ('?', p[1], p[3], p[5])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_IF')
+        id = inc()
+        dot.node(str(id), '?')
+        id = inc()
+        dot.node(str(id), ':')
+
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(id-1))
+        dot.edge(str(p[0]), str(p[3]))
+        dot.edge(str(p[0]), str(p[id]))
+        dot.edge(str(p[0]), str(p[5]))
+
+
+
 
     def p_Op_If_2(p):
         '''
         Op_If : Op_Or
         '''
-        p[0] = p[1]
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_IF')
+        dot.edge(str(p[0]), str(p[1]))
 
     def p_Op_Or_1(p):
         '''
         Op_Or : Op_Or OR Op_And
         '''
-        p[0] = ('||', p[1], p[3])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_OR')
+        id = inc()
+        dot.node(str(id), '||')
+
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[3]))
 
     def p_Op_Or_2(p):
         '''
         Op_Or : Op_And
         '''
-        p[0] = p[1]
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_OR')
+        dot.edge(str(p[0]), str(p[1]))
 
     def p_Op_And_1(p):
         '''
         Op_And : Op_And AND Op_BinOR
         '''
-        p[0] = ('&&', p[1], p[3])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_AND')
+        id = inc()
+        dot.node(str(id), '&&')
+
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[3]))
 
     def p_Op_And_2(p):
         '''
         Op_And : Op_BinOR
         '''
-        p[0] = p[1]
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_AND')
+        dot.edge(str(p[0]), str(p[1]))
 
     def p_Op_BinOR_1(p):
         '''
         Op_BinOR : Op_BinOR OR_B Op_BinXOR
         '''
-        p[0] = ('|', p[1], p[3])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_AND')
+        id = inc()
+        dot.node(str(id), '&&')
+
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[3]))
 
     def p_Op_BinOR_2(p):
         '''
         Op_BinOR : Op_BinXOR
         '''
-        p[0] = p[1]
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_BIN_XOR')
+        dot.edge(str(p[0]), str(p[1]))
 
     def p_Op_BinXOR_1(p):
         '''
         Op_BinXOR : Op_BinXOR XOR_B Op_BinAND
         '''
-        p[0] = ('^', p[1], p[3])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_BIN_OR')
+        id = inc()
+        dot.node(str(id), '^')
+
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[3]))
 
     def p_Op_BinXOR_2(p):
         '''
         Op_BinXOR : Op_BinAND
         '''
-        p[0] = p[1]
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_BIN_AND')
+        dot.edge(str(p[0]), str(p[1]))
 
     def p_Op_BinAND_1(p):
         '''
         Op_BinAND : Op_BinAND AND_B Op_Equate
         '''
-        p[0] = ('&', p[1], p[3])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_BIN_AND')
+        id = inc()
+        dot.node(str(id), '&')
+
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[3]))
 
     def p_Op_BinAND_2(p):
         '''
         Op_BinAND : Op_Equate
         '''
-        p[0] = p[1]
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_BIN_AND')
+        dot.edge(str(p[0]), str(p[1]))
 
     def p_Op_Equate_1(p):
         '''
         Op_Equate : Op_Equate EQUAL Op_Compare
             | Op_Equate NOT_EQUAL Op_Compare
         '''
-        p[0] = (p[2], p[1], p[3])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_EQUATE')
+        id = inc()
+        dot.node(str(id), str(p[2]))
+
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[3]))
 
 
     def p_Op_Equate_2(p):
         '''
         Op_Equate : Op_Compare
         '''
-        p[0] = p[1]
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_EQUATE')
+        dot.edge(str(p[0]), str(p[1]))
 
     def p_Op_Compare_1(p):
         '''
@@ -1012,39 +1352,72 @@ def analize(entrada):
             | Op_Compare LESS_EQUAL Op_Shift
             | Op_Compare GREATER_EQUAL Op_Shift
         '''
-        p[0] = (p[2], p[1], p[3])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_COMPARE')
+        id = inc()
+        dot.node(str(id), str(p[2]))
+
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[3]))
 
     def p_Op_Compare_2(p):
         '''
         Op_Compare : Op_Shift
         '''
-        p[0] = p[1]
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_COMPARE')
+        dot.edge(str(p[0]), str(p[1]))
 
     def p_Op_Shift_1(p):
         '''
         Op_Shift : Op_Shift SHIFT_L Op_Add
             | Op_Shift SHIFT_R Op_Add
         '''
-        p[0] = (p[2], p[1], p[3])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_SHIFT')
+        id = inc()
+        dot.node(str(id), str(p[2]))
+
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[3]))
 
     def p_Op_Shift_2(p):
         '''
         Op_Shift : Op_Add
         '''
-        p[0] = p[1]
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_SHIFT')
+        dot.edge(str(p[0]), str(p[1]))
 
     def p_Op_Add_1(p):
         '''
         Op_Add : Op_Add PLUS Op_Mult
             | Op_Add MINUS Op_Mult
         '''
-        p[0] = (p[2], p[1], p[3])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_ADD')
+        id = inc()
+        dot.node(str(id), str(p[2]))
+
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[3]))
 
     def p_Op_Add_2(p):
         '''
         Op_Add : Op_Mult
         '''
-        p[0] = p[1]
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_ADD')
+        dot.edge(str(p[0]), str(p[1]))
 
     def p_Op_Mult_1(p):
         '''
@@ -1052,13 +1425,24 @@ def analize(entrada):
             | Op_Mult DIVIDE Op_Unary
             | Op_Mult REMAINDER Op_Unary
         '''
-        p[0] = (p[2], p[1], p[3])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_MULT')
+        id = inc()
+        dot.node(str(id), str(p[2]))
+
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[3]))
 
     def p_Op_Mult_2(p):
         '''
         Op_Mult : Op_Unary
         '''
-        p[0] = p[1]
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_MULT')
+        dot.edge(str(p[0]), str(p[1]))
 
     def p_Op_Unary_1(p):
         '''
@@ -1068,69 +1452,122 @@ def analize(entrada):
             | MULTIPLY Op_Unary
             | AND_B Op_Unary            
         '''
-        p[0] = (p[1], p[2])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_UNARY')
+        id = inc()
+        dot.node(str(id), p[1])
+        dot.edge(str(p[0]), str(id))
 
     def p_Op_Unary_2(p):
         '''
         Op_Unary : PLUSPLUS Op_Unary
             | MINUSMINUS Op_Unary
         '''
-        p[0] = ('pre', p[1], p[2])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_UNARY')
+        id = inc()
+        dot.node(str(id), p[1])
+        dot.edge(str(p[0]), str(id))
 
     def p_Op_Unary_3(p):
         '''
         Op_Unary : Op_Pointer PLUSPLUS
             | Op_Pointer MINUSMINUS
         '''
-        p[0] = ('post', p[2], p[1])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_UNARY')
+        id = inc()
+        dot.node(str(id), p[2])
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(id))
 
     def p_Op_Unary_4(p):
         '''
         Op_Unary : L_PAR Type R_PAR Op_Unary
         '''
-        p[0] = ('cast', p[2], p[4])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_UNARY')
+        id = inc()
+        dot.node(str(id), p[1])
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[4]))
 
     def p_Op_Unary_5(p):
         '''
         Op_Unary : SIZEOF L_PAR Type R_PAR
         '''
-        p[0] = ('sizeof', p[3])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_UNARY')
+        id = inc()
+        dot.node(str(id), p[1])
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[3]))
 
     def p_Op_Unary_6(p):
         '''
         Op_Unary : SIZEOF L_PAR NAME Pointers R_PAR
         '''
-        p[0] = ('sizeof', p[3], p[4])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_UNARY')
+        id = inc()
+        dot.node(str(id), p[1])
+        dot.edge(str(p[0]), str(id))
+        dot.edge(str(p[0]), str(p[3]))
+        dot.edge(str(p[0]), str(p[4]))
 
     def p_Op_Unary_7(p):
         '''
         Op_Unary : Op_Pointer
         '''
-        p[0] = p[1]
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_UNARY')
+        dot.edge(str(p[0]), str(p[1]))
 
     def p_Op_Pointer_1(p):
         '''
         Op_Pointer : Op_Pointer DOT Value
         '''
-        p[0] = ('.', p[1], p[3])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_POINTER .')
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(p[3]))
 
     def p_Op_Pointer_2(p):
         '''
         Op_Pointer : Op_Pointer ACCESS Value
         '''
-        p[0] = ('->', p[1], p[3])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_POINTER ->')
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(p[3]))
 
     def p_Op_Pointer_3(p):
         '''
         Op_Pointer : Op_Pointer L_BRACKET Expr R_BRACKET
         '''
-        p[0] = ('[]', p[1], p[3])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_POINTER []')
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(p[3]))
 
     def p_Op_Pointer_4(p):
         '''
         Op_Pointer : Value
         '''
-        p[0] = p[1]
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'OP_POINTER')
+        dot.edge(str(p[0]), str(p[1]))
 
     def p_Value_1(p):
         '''
@@ -1140,25 +1577,38 @@ def analize(entrada):
             | DECIMAL
             | NAME
         '''
-        p[0] = p[1]
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), str(p[1]))
 
     def p_Value_2(p):
         '''
         Value : NAME L_PAR Expr R_PAR
         '''
-        p[0] = ('call', p[1], p[3])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'VALUE call')
+        dot.edge(str(p[0]), str(p[1]))
+        dot.edge(str(p[0]), str(p[3]))
 
     def p_Value_3(p):
         '''
         Value : NAME L_PAR R_PAR
         '''
-        p[0] = ('call', p[1])
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'VALUE call')
+        dot.edge(str(p[0]), str(p[1]))
 
     def p_Value_4(p):
         '''
         Value : L_PAR Expr R_PAR
         '''
         p[0] = p[2]
+        id = inc() #0
+        p[0] = id 
+        dot.node(str(id), 'VALUE')
+        dot.edge(str(p[0]), str(p[2]))
       
     #Empty production
     def p_empty(p):
@@ -1167,19 +1617,7 @@ def analize(entrada):
         '''
         p[0] = None
 
-
-    def p_error(p):
-        if p:
-            print("Error sintáctico en el token =", p.type, 'L:', p.lineno)
-            # Just discard the token and tell the parser it's okay.
-            error = Error('Error en el token '+ str(p.type), str(p.lineno), 0)
-            parser.errok()
-        else:
-            error = Error('Error al final del archivo', 0, 0)
-            pass
-        syntacticErrors.add(error)
-
-       
+      
 
     from .ply import yacc as yacc
     
@@ -1187,5 +1625,14 @@ def analize(entrada):
     ast = parser.parse(entrada,tracking=True)
     
     
+    dotFile = str(dot.source)
+    newDotFile = dotFile.replace('-- None', '')
+
+
+    tree = pydotplus.graph_from_dot_data(newDotFile)
+    #print(dot.source)
+    tree.write_pdf('AST.pdf')
+    
+    ast = parser.parse(entrada)
 
     return ast
