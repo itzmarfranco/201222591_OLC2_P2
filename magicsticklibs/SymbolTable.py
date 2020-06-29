@@ -14,7 +14,7 @@ class Table:
                 sym.varType = symbol.varType
                 sym.value = symbol.value
                 sym.length = symbol.length
-                sym.tree = symbol.tree
+                sym.varName = symbol.varName
                 return
         self.symbols.append(symbol)
 
@@ -22,6 +22,7 @@ class Table:
         for sym in self.symbols:
             if sym.id == id:
                 return sym
+        return None
 
     def remove(self, id):
         for sym in self.symbols:
@@ -31,15 +32,19 @@ class Table:
 
 
     def print(self):
-        print('ID\t', 'TYPE\t', 'VALUE\t', 'LENGTH')
+        print('ID\t\t', 'TYPE\t\t', 'VALUE\t\t', 'LENGTH\t\t', 'NAME3D')
         for sym in self.symbols:
-            print(sym.id, '\t', sym.varType, '\t', sym.value, '\t', sym.length)
+            print(sym.id, '\t\t', sym.varType, '\t\t', sym.value, '\t\t', sym.length, '\t\t', sym.varName)
 
 
 class Symbol:
-    def __init__(self, id, varType, value, length, tree):
+    def __init__(self, id, varType, value, length, varName):
         self.id = id
         self.varType = varType
         self.value = value
         self.length = length
-        self.tree = tree
+        self.varName = varName
+
+    def print(self):
+        print('ID', '\t\t', 'Vartype', '\t\t', 'Value', '\t\t', 'Length', '\t\t', '3DName')
+        print(self.id, '\t\t', self.varType, '\t\t', self.value, '\t\t', self.length, '\t\t', self.varName)

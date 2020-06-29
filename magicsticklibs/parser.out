@@ -84,7 +84,7 @@ Rule 70    Stm -> PRINTF L_PAR STRING Printf_Params R_PAR SEMICOLON
 Rule 71    Printf_Params -> COMMA Printf_Param Printf_Params
 Rule 72    Printf_Params -> Printf_Param
 Rule 73    Printf_Params -> empty
-Rule 74    Printf_Param -> Value
+Rule 74    Printf_Param -> Op_Pointer
 Rule 75    Stm -> SCANF L_PAR STRING COMMA Scanf_Param R_PAR SEMICOLON
 Rule 76    Scanf_Param -> AND_B NAME
 Rule 77    Scanf_Param -> NAME
@@ -307,7 +307,7 @@ Op_Equate            : 129 130 131 132
 Op_If                : 35 108 109 110 111 112 113 114 115 116 117 118 119 119
 Op_Mult              : 142 143 144 145 146 147
 Op_Or                : 119 120 121
-Op_Pointer           : 156 157 161 162 163 164
+Op_Pointer           : 74 156 157 161 162 163 164
 Op_Shift             : 134 135 136 137 138 139 140
 Op_Unary             : 145 146 147 148 149 150 151 152 153 154 155 158
 Param                : 16 17
@@ -327,7 +327,7 @@ Type                 : 18 19 20 21 24 26 31 32 158 159
 Typedef_Decl         : 9
 Types                : 10 20
 Union_Decl           : 6
-Value                : 74 100 162 163 165
+Value                : 100 162 163 165
 Var                  : 31 32 33 41
 Var_Decl             : 8 29 30 78
 Var_Item             : 39
@@ -3558,6 +3558,12 @@ state 133
     SEMICOLON       reduce using rule 165 (Op_Pointer -> Value .)
     R_PAR           reduce using rule 165 (Op_Pointer -> Value .)
     COLON           reduce using rule 165 (Op_Pointer -> Value .)
+    INTEGER         reduce using rule 165 (Op_Pointer -> Value .)
+    STRING          reduce using rule 165 (Op_Pointer -> Value .)
+    CHARACTER       reduce using rule 165 (Op_Pointer -> Value .)
+    DECIMAL         reduce using rule 165 (Op_Pointer -> Value .)
+    NAME            reduce using rule 165 (Op_Pointer -> Value .)
+    L_PAR           reduce using rule 165 (Op_Pointer -> Value .)
 
 
 state 134
@@ -9564,6 +9570,12 @@ state 277
     SEMICOLON       reduce using rule 162 (Op_Pointer -> Op_Pointer DOT Value .)
     R_PAR           reduce using rule 162 (Op_Pointer -> Op_Pointer DOT Value .)
     COLON           reduce using rule 162 (Op_Pointer -> Op_Pointer DOT Value .)
+    INTEGER         reduce using rule 162 (Op_Pointer -> Op_Pointer DOT Value .)
+    STRING          reduce using rule 162 (Op_Pointer -> Op_Pointer DOT Value .)
+    CHARACTER       reduce using rule 162 (Op_Pointer -> Op_Pointer DOT Value .)
+    DECIMAL         reduce using rule 162 (Op_Pointer -> Op_Pointer DOT Value .)
+    NAME            reduce using rule 162 (Op_Pointer -> Op_Pointer DOT Value .)
+    L_PAR           reduce using rule 162 (Op_Pointer -> Op_Pointer DOT Value .)
 
 
 state 278
@@ -9713,6 +9725,12 @@ state 279
     SEMICOLON       reduce using rule 163 (Op_Pointer -> Op_Pointer ACCESS Value .)
     R_PAR           reduce using rule 163 (Op_Pointer -> Op_Pointer ACCESS Value .)
     COLON           reduce using rule 163 (Op_Pointer -> Op_Pointer ACCESS Value .)
+    INTEGER         reduce using rule 163 (Op_Pointer -> Op_Pointer ACCESS Value .)
+    STRING          reduce using rule 163 (Op_Pointer -> Op_Pointer ACCESS Value .)
+    CHARACTER       reduce using rule 163 (Op_Pointer -> Op_Pointer ACCESS Value .)
+    DECIMAL         reduce using rule 163 (Op_Pointer -> Op_Pointer ACCESS Value .)
+    NAME            reduce using rule 163 (Op_Pointer -> Op_Pointer ACCESS Value .)
+    L_PAR           reduce using rule 163 (Op_Pointer -> Op_Pointer ACCESS Value .)
 
 
 state 280
@@ -9909,8 +9927,12 @@ state 287
     (71) Printf_Params -> . COMMA Printf_Param Printf_Params
     (72) Printf_Params -> . Printf_Param
     (73) Printf_Params -> . empty
-    (74) Printf_Param -> . Value
+    (74) Printf_Param -> . Op_Pointer
     (174) empty -> .
+    (162) Op_Pointer -> . Op_Pointer DOT Value
+    (163) Op_Pointer -> . Op_Pointer ACCESS Value
+    (164) Op_Pointer -> . Op_Pointer L_BRACKET Expr R_BRACKET
+    (165) Op_Pointer -> . Value
     (166) Value -> . INTEGER
     (167) Value -> . STRING
     (168) Value -> . CHARACTER
@@ -9932,7 +9954,8 @@ state 287
     Printf_Params                  shift and go to state 304
     Printf_Param                   shift and go to state 306
     empty                          shift and go to state 307
-    Value                          shift and go to state 308
+    Op_Pointer                     shift and go to state 308
+    Value                          shift and go to state 133
 
 state 288
 
@@ -10239,6 +10262,12 @@ state 299
     SEMICOLON       reduce using rule 164 (Op_Pointer -> Op_Pointer L_BRACKET Expr R_BRACKET .)
     R_PAR           reduce using rule 164 (Op_Pointer -> Op_Pointer L_BRACKET Expr R_BRACKET .)
     COLON           reduce using rule 164 (Op_Pointer -> Op_Pointer L_BRACKET Expr R_BRACKET .)
+    INTEGER         reduce using rule 164 (Op_Pointer -> Op_Pointer L_BRACKET Expr R_BRACKET .)
+    STRING          reduce using rule 164 (Op_Pointer -> Op_Pointer L_BRACKET Expr R_BRACKET .)
+    CHARACTER       reduce using rule 164 (Op_Pointer -> Op_Pointer L_BRACKET Expr R_BRACKET .)
+    DECIMAL         reduce using rule 164 (Op_Pointer -> Op_Pointer L_BRACKET Expr R_BRACKET .)
+    NAME            reduce using rule 164 (Op_Pointer -> Op_Pointer L_BRACKET Expr R_BRACKET .)
+    L_PAR           reduce using rule 164 (Op_Pointer -> Op_Pointer L_BRACKET Expr R_BRACKET .)
 
 
 state 300
@@ -10389,7 +10418,11 @@ state 304
 state 305
 
     (71) Printf_Params -> COMMA . Printf_Param Printf_Params
-    (74) Printf_Param -> . Value
+    (74) Printf_Param -> . Op_Pointer
+    (162) Op_Pointer -> . Op_Pointer DOT Value
+    (163) Op_Pointer -> . Op_Pointer ACCESS Value
+    (164) Op_Pointer -> . Op_Pointer L_BRACKET Expr R_BRACKET
+    (165) Op_Pointer -> . Value
     (166) Value -> . INTEGER
     (167) Value -> . STRING
     (168) Value -> . CHARACTER
@@ -10407,7 +10440,8 @@ state 305
     L_PAR           shift and go to state 278
 
     Printf_Param                   shift and go to state 318
-    Value                          shift and go to state 308
+    Op_Pointer                     shift and go to state 308
+    Value                          shift and go to state 133
 
 state 306
 
@@ -10425,16 +10459,22 @@ state 307
 
 state 308
 
-    (74) Printf_Param -> Value .
+    (74) Printf_Param -> Op_Pointer .
+    (162) Op_Pointer -> Op_Pointer . DOT Value
+    (163) Op_Pointer -> Op_Pointer . ACCESS Value
+    (164) Op_Pointer -> Op_Pointer . L_BRACKET Expr R_BRACKET
 
-    R_PAR           reduce using rule 74 (Printf_Param -> Value .)
-    COMMA           reduce using rule 74 (Printf_Param -> Value .)
-    INTEGER         reduce using rule 74 (Printf_Param -> Value .)
-    STRING          reduce using rule 74 (Printf_Param -> Value .)
-    CHARACTER       reduce using rule 74 (Printf_Param -> Value .)
-    DECIMAL         reduce using rule 74 (Printf_Param -> Value .)
-    NAME            reduce using rule 74 (Printf_Param -> Value .)
-    L_PAR           reduce using rule 74 (Printf_Param -> Value .)
+    R_PAR           reduce using rule 74 (Printf_Param -> Op_Pointer .)
+    COMMA           reduce using rule 74 (Printf_Param -> Op_Pointer .)
+    INTEGER         reduce using rule 74 (Printf_Param -> Op_Pointer .)
+    STRING          reduce using rule 74 (Printf_Param -> Op_Pointer .)
+    CHARACTER       reduce using rule 74 (Printf_Param -> Op_Pointer .)
+    DECIMAL         reduce using rule 74 (Printf_Param -> Op_Pointer .)
+    NAME            reduce using rule 74 (Printf_Param -> Op_Pointer .)
+    L_PAR           reduce using rule 74 (Printf_Param -> Op_Pointer .)
+    DOT             shift and go to state 219
+    ACCESS          shift and go to state 220
+    L_BRACKET       shift and go to state 221
 
 
 state 309
@@ -11111,8 +11151,12 @@ state 318
     (71) Printf_Params -> . COMMA Printf_Param Printf_Params
     (72) Printf_Params -> . Printf_Param
     (73) Printf_Params -> . empty
-    (74) Printf_Param -> . Value
+    (74) Printf_Param -> . Op_Pointer
     (174) empty -> .
+    (162) Op_Pointer -> . Op_Pointer DOT Value
+    (163) Op_Pointer -> . Op_Pointer ACCESS Value
+    (164) Op_Pointer -> . Op_Pointer L_BRACKET Expr R_BRACKET
+    (165) Op_Pointer -> . Value
     (166) Value -> . INTEGER
     (167) Value -> . STRING
     (168) Value -> . CHARACTER
@@ -11134,7 +11178,8 @@ state 318
     Printf_Param                   shift and go to state 306
     Printf_Params                  shift and go to state 333
     empty                          shift and go to state 307
-    Value                          shift and go to state 308
+    Op_Pointer                     shift and go to state 308
+    Value                          shift and go to state 133
 
 state 319
 

@@ -8,13 +8,16 @@ from graphviz import Digraph
 import pydotplus
 
 #from node import Node
-from SymbolTable import Table, Symbol
+#from SymbolTable import Table, Symbol
 from Error import Error, ErrorList
+
+from .Instruction import *
+from .Expression import *
 
 
 import math
 
-ts = Table([])
+
 
 lexicalErrors = ErrorList([])
 syntacticErrors = ErrorList([])
@@ -126,10 +129,10 @@ def analize(entrada):
         'QUOTE_1', # '
         'QUOTE_2', # "
 
-        'SYMINT', # %d
-        'SYMFLOAT', # %f for float and doble
-        'SYMCHAR', # %c
-        'SYMSTRING', # %s
+        # 'SYMINT', # %d
+        # 'SYMFLOAT', # %f for float and doble
+        # 'SYMCHAR', # %c
+        # 'SYMSTRING', # %s
 
 
         'INTEGER', # 1 2 3...
@@ -216,7 +219,12 @@ def analize(entrada):
         return t
 
     def t_STRING(t):
-        r'(\' | \").*?(\' | \")'
+        r'(\").*?(\")'
+        t.value = t.value[1:-1]
+        return t 
+
+    def t_CHARACTER(t):
+        r'(\').?(\')'
         t.value = t.value[1:-1]
         return t 
 
@@ -271,23 +279,35 @@ def analize(entrada):
     # )
 
     dot = Digraph(comment='AST')
+
+    
     # Define our grammar. We allow expressions, var_assign's and empty's.
+    def p_start(p):
+        '''
+        start : Decls
+        '''
+        p[0] = p[1]
+        print('OK')
+        #print(len(p[0]))
+
     def p_Decls_1(p):
         '''
         Decls : Decl Decls
         '''
         aux = []
         aux.append(p[1])
-        aux.append(p[2])
+        if p[2] != None:
+            for d in p[2]:
+                if d != None: aux.append(d)
         p[0] = tuple(aux)
-        print(p[0])
-        #print('RECONOCIDO')
+        #print(p[0])
+        # call method to run tree
 
     def p_Decls_2(p):
         '''
         Decls : empty
         '''
-        p[0] = 'NoneDecls'
+        p[0] = None
 
     def p_Decl(p):
         '''
@@ -311,24 +331,28 @@ def analize(entrada):
             | Func_ID L_PAR Params R_PAR SEMICOLON
             | Func_ID L_PAR R_PAR SEMICOLON
         '''
+        #NO
 
     def p_Func_Decl_1(p):
         '''
-        Func_Decl : Func_ID L_PAR Params  R_PAR Block
+        Func_Decl : Func_ID L_PAR Params R_PAR Block
         '''
-        p[0] = (p[1], p[3], p[5])
+        #p[0] = (p[1], p[3], p[5])
+        p[0] = function(p[1][0], p[1][1], p[3], p[5])
 
     def p_Func_Decl_2(p):
         '''
         Func_Decl : Func_ID L_PAR Id_List R_PAR Struct_Def Block
         '''
         p[0] = (p[1], p[3], p[5])
+        # NO
 
     def p_Func_Decl_3(p):
         '''
         Func_Decl : Func_ID L_PAR R_PAR Block
         '''
-        p[0] = (p[1], p[4])
+        #p[0] = (p[1], p[4])
+        p[0] = function(p[1][0], p[1][1], None, p[4])
 
     def p_Params_1(p):
         '''
@@ -336,7 +360,12 @@ def analize(entrada):
         '''
         aux = []
         aux.append(p[1])
-        aux.append(p[3])
+        if type(p[3]) == tuple and p[3][0] not in ('const', 'unconst'):
+            for a in p[3]:
+                aux.append(a)
+        else:
+            aux.append(p[3])
+
         p[0] = tuple(aux)
 
     def p_Params_2(p):
@@ -355,7 +384,7 @@ def analize(entrada):
         '''
         Param : Type NAME
         '''
-        p[0] = (p[1], p[2])
+        p[0] = ('unconst',p[1], p[2])
 
     def p_Types_1(p):
         '''
@@ -398,7 +427,7 @@ def analize(entrada):
         '''
         Func_ID : NAME
         '''
-        p[0] = p[1]
+        p[0] = ('int', p[1]) # int is the default func type
 
     # ===================================================================
     # Type Declaration
@@ -409,18 +438,21 @@ def analize(entrada):
         Typedef_Decl : TYPEDEF Type NAME SEMICOLON
         '''
         p[0] = ('typedef', p[2], p[3])
+        # NO
 
     def p_Struct_Decl(p):
         '''
         Struct_Decl  : STRUCT NAME L_CURLY Struct_Def R_CURLY  SEMICOLON 
         '''
-        p[0] = ('struct', p[1], p[4])
+        #p[0] = ('struct', p[1], p[4])
+        p[0] = struct(p[2], p[4])
 
     def p_Union_Decl(p):
         '''
         Union_Decl : UNION NAME L_CURLY Struct_Def R_CURLY  SEMICOLON 
         '''
-        p[0] = ('union', p[1], p[3])
+        #p[0] = ('union', p[1], p[3])
+        p[0] = union(p[2], p[4])
 
     def p_Struct_Def_1(p):
         '''
@@ -437,7 +469,6 @@ def analize(entrada):
         '''
         p[0] = p[1]
 
-
     # ===================================================================
     # Variable Declaration
     # ===================================================================
@@ -448,8 +479,17 @@ def analize(entrada):
         '''
         aux = []
         aux.append(p[3])
-        aux.append(p[4])
-        p[0] = (p[1], tuple(aux))
+        if p[4] != None:
+            for var in p[4]:
+                if var != None: aux.append(var)
+        aux2 = []
+        for e in aux:
+            if type(e) == tuple:
+                aux2.append(e[1])
+            else:
+                aux2.append(e)
+
+        p[0] = definition(p[1], p[2], aux2)
 
     def p_Var_Decl_2(p):
         '''
@@ -457,8 +497,17 @@ def analize(entrada):
         '''
         aux = []
         aux.append(p[2])
-        aux.append(p[3])
-        p[0] = (p[1], tuple(aux))
+        if p[3] != None:
+            for var in p[3]:
+                if var != None: aux.append(var)
+        aux2 = []
+        for e in aux:
+            if type(e) == tuple:
+                aux2.append(e[1])
+            else:
+                aux2.append(e)
+
+        p[0] = definition(None, p[1], aux2)
 
     def p_Var_Decl_3(p):
         '''
@@ -466,38 +515,49 @@ def analize(entrada):
         '''
         aux = []
         aux.append(p[2])
-        aux.append(p[3])
-        p[0] = (p[1], tuple(aux))
+        if p[3] != None:
+            for var in p[3]:
+                if var != None: aux.append(var)
+        aux2 = []
+        for e in aux:
+            if type(e) == tuple:
+                aux2.append(e[1])
+            else:
+                aux2.append(e)
+
+        p[0] = definition(p[1], (('signed','int'), None), aux2)
 
     def p_Var_1(p):
         '''
         Var : NAME Array
         '''
-        p[0] = (p[1], p[2])
+        #p[0] = ('=', p[1], p[2], None)
+        p[0] = Variable(None, p[1], p[2], None)
     
     def p_Var_2(p):
         '''
         Var : NAME Array ASSIGN Op_If
         '''
-        p[0] = ('=',  p[1], p[2], p[4])
+        #p[0] = ('=',  p[1], p[2], p[4])
+        p[0] = Variable(None, p[1], p[2], p[4])
 
     def p_Array_1(p):
         '''
         Array    : L_BRACKET Expr R_BRACKET
         '''
-        p[0] = p[2]
+        p[0] = ('[]', p[2])
     
     def p_Array_2(p):
         '''
         Array : L_BRACKET R_BRACKET
         '''
-        p[0] = ('[]')
+        p[0] = ('[]', None)
 
     def p_Array_3(p):
         '''
         Array : empty
         '''
-        p[0] = 'NoneArray'
+        p[0] = (None, None)
 
     def p_Var_List_1(p):
         '''
@@ -505,14 +565,16 @@ def analize(entrada):
         '''
         aux = []
         aux.append(p[2])
-        aux.append(p[3])
-        p[0] = tuple(aux)
+        if p[3] != None:
+            for v in p[3]:
+                if v != None: aux.append(v)
+        p[0] = aux
 
     def p_Var_List_2(p):
         '''
         Var_List : empty
         '''
-        p[0] = 'NoneVarList'
+        p[0] = None
 
     def p_Var_Item(p):
         '''
@@ -539,7 +601,8 @@ def analize(entrada):
         '''
         Enum_Decl : ENUM NAME L_CURLY Enum_Def R_CURLY SEMICOLON
         '''
-        p[0] = ('enum', p[2], p[4])
+        #p[0] = ('enum', p[2], p[4])
+        p[0] = enum(p[2], p[4])
 
     def p_Enum_Def_1(p):
         '''
@@ -590,24 +653,28 @@ def analize(entrada):
         Base : STRUCT NAME 
         '''
         p[0] = ('struct', p[2])
+        #p[0] = definition(None, 'struct', p[2])
 
     def p_Base_3(p):
         '''
         Base : STRUCT L_CURLY Struct_Def R_CURLY            
         '''
         p[0] = ('struct', p[3])
+        # NO
 
     def p_Base_4(p):
         '''
         Base : UNION NAME
         '''
         p[0] = ('union', p[2])
+        #p[0] = definition(None, 'union', p[2])
 
     def p_Base_5(p):
         '''
         Base : UNION L_CURLY Struct_Def R_CURLY 
         '''
         p[0] = ('union', p[3])
+        # NO
 
     def p_Base_6(p):
         '''
@@ -626,7 +693,7 @@ def analize(entrada):
         '''
         Sign : empty
         '''
-        p[0] = 'NoneSign'
+        p[0] = 'signed' #signed by default
 
     def p_Scalar(p):
         '''
@@ -651,7 +718,7 @@ def analize(entrada):
         '''
         Pointers : empty
         '''
-        p[0] = 'NonePointers'
+        p[0] = None
 
     # ===================================================================
     # Statements
@@ -660,7 +727,7 @@ def analize(entrada):
         '''
         Stm : PRINTF L_PAR STRING Printf_Params R_PAR SEMICOLON
         '''
-        p[0] = ('printf', p[3], p[4])
+        p[0] = printf(p[3], p[4])
 
     def p_Printf_Params_1(p):
         '''
@@ -681,11 +748,11 @@ def analize(entrada):
         '''
         Printf_Params : empty
         '''
-        p[0] = 'NonePrintfParam'
+        p[0] = None
 
     def p_Printf_Param(p):
         '''
-        Printf_Param : Value
+        Printf_Param : Op_Pointer
         '''
         p[0] = p[1]
 
@@ -693,7 +760,8 @@ def analize(entrada):
         '''
         Stm : SCANF L_PAR STRING COMMA Scanf_Param R_PAR SEMICOLON
         '''
-        p[0] = ('scanf', p[3], p[5])
+        #p[0] = ('scanf', p[3], p[5])
+        p[0] = scanf(p[3], p[5])
 
     def p_Scanf_Param_1(p):
         '''
@@ -707,7 +775,6 @@ def analize(entrada):
         '''
         p[0] = p[1]
 
-########
 
     def p_Stm_1(p):
         '''
@@ -719,32 +786,37 @@ def analize(entrada):
         '''
         Stm : NAME COLON
         '''
-        p[0] = p[1]
+        #p[0] = p[1]
+        p[0] = Variable(None, p[1], None, None)
 
     def p_Stm_3(p):
         '''
         Stm : IF L_PAR Expr R_PAR Then_Stm ELSE Stm
         '''
-        p[0] = ('if', p[3], p[5], 'else', p[7])
+        #p[0] = ('if', p[3], p[5], 'else', p[7])
+        p[0] = ifelse(p[3], p[5], p[7])
 
     def p_Stm_7(p):
         '''
         Stm : IF L_PAR Expr R_PAR Stm
         '''
-        p[0] = ('if', p[3], p[5])
+        #p[0] = ('if', p[3], p[5])
+        p[0] = iff(p[3], p[5])
 
 
     def p_Stm_4(p):
         '''
         Stm : WHILE L_PAR Expr R_PAR Stm 
         '''
-        p[0] = ('while', p[3], p[5])
+        #p[0] = ('while', p[3], p[5])
+        p[0] = whilee(p[3], p[5])
 
     def p_Stm_5(p):
         '''
         Stm : FOR L_PAR Arg SEMICOLON Arg SEMICOLON Arg R_PAR Stm
         '''
-        p[0] = ('for', p[3], p[5], p[7], p[9])
+        #p[0] = ('for', p[3], p[5], p[7], p[9])
+        p[0] = forr(p[3], p[5], p[7], p[9])
     
     def p_Stm_6(p):
         '''
@@ -756,19 +828,23 @@ def analize(entrada):
         '''
         Then_Stm : IF L_PAR Expr R_PAR Then_Stm ELSE Then_Stm 
         '''
-        p[0] = ('if', p[3], p[5], 'else', p[7])
+        #p[0] = ('if', p[3], p[5], 'else', p[7])
+        p[0] = ifelse(p[3], p[5]. p[7])
 
     def p_Then_Stm_2(p):
         '''
         Then_Stm : WHILE L_PAR Expr R_PAR Then_Stm 
         '''
-        p[0] = ('while', p[3], p[5])
+        #p[0] = ('while', p[3], p[5])
+        p[0] = whilee(p[3], p[5])
 
     def p_Then_Stm_3(p):
         '''
         Then_Stm : FOR L_PAR Arg SEMICOLON Arg SEMICOLON Arg R_PAR Then_Stm
         '''
-        p[0] = ('for', p[3], p[5], p[7], p[9])
+        #p[0] = ('for', p[3], p[5], p[7], p[9])
+        p[0] = forr(p[3], p[5], p[7], p[9])
+
 
     def p_Then_Stm_4(p):
         '''
@@ -780,13 +856,15 @@ def analize(entrada):
         '''
         Normal_Stm : DO Stm WHILE L_PAR Expr R_PAR            
         '''
-        p[0] = ('do', p[2], p[5])
+        #p[0] = ('do', p[2], p[5])
+        p[0] = dowhile(p[5], p[2])
 
     def p_Normal_Stm_2(p):
         '''
         Normal_Stm : SWITCH L_PAR Expr R_PAR L_CURLY Case_Stms R_CURLY         
         '''
-        p[0] = ('switch', p[3], p[6])
+        #p[0] = ('switch', p[3], p[6])
+        p[0] = switch(p[3], p[6])
 
     def p_Normal_Stm_3(p):
         '''
@@ -840,7 +918,7 @@ def analize(entrada):
         '''
         Arg : empty
         '''
-        p[0] = 'NoneArg'
+        p[0] = None
 
     def p_Case_Stms_1(p):
         '''
@@ -854,11 +932,12 @@ def analize(entrada):
         '''
         p[0] = ('default', p[3])
 
+
     def p_Case_Stms_3(p):
         '''
         Case_Stms : empty
         '''
-        p[0] = 'NoneCaseStm'
+        p[0] = None
 
     def p_Block(p):
         '''
@@ -872,14 +951,16 @@ def analize(entrada):
         '''
         aux = []
         aux.append(p[1])
-        aux.append(p[2])
+        if p[2] != None:
+            for d in p[2]:
+                if d != None: aux.append(d)
         p[0] = tuple(aux)
 
     def p_Stm_List_2(p):
         '''
         Stm_List  :  empty  
         '''
-        p[0] = 'NoneStmList'
+        p[0] = None
 
 
     # ===================================================================
@@ -890,13 +971,20 @@ def analize(entrada):
         '''
         Expr : Expr COMMA Op_Assign
         '''
-        p[0] = (p[1], p[3]) # NOT SUPPORTED BY MINORC
+        #p[0] = (p[1], p[3])
+        aux = []
+        for e in p[1].expressions:
+            aux.append(e)
+        aux.append(p[3])
+        #print(aux)
+        p[0] = ExpresionList(aux)
 
     def p_Expr_2(p):
         '''
         Expr : Op_Assign
         '''
-        p[0] = p[1]
+        #p[0] = p[1]
+        p[0] = ExpresionList([p[1]])
 
     def p_Op_Assign_1(p):
         '''
@@ -911,7 +999,8 @@ def analize(entrada):
             | Op_If ASHIFT_R Op_Assign
             | Op_If ASHIFT_L Op_Assign
         '''
-        p[0] = (p[2], p[1], p[3])
+        #p[0] = (p[2], p[1], p[3])
+        p[0] = AssignOperation(p[1], p[3] ,p[2])
 
     def p_Op_Assign_2(p):
         '''
@@ -923,7 +1012,8 @@ def analize(entrada):
         '''
         Op_If : Op_Or QUESTION Op_If COLON Op_If
         '''
-        p[0] = ('?', p[1], p[3], p[5])
+        #p[0] = ('?', p[1], p[3], p[5])
+        p[0] = TernaryOperation(p[1], p[3], p[5])
 
     def p_Op_If_2(p):
         '''
@@ -935,7 +1025,8 @@ def analize(entrada):
         '''
         Op_Or : Op_Or OR Op_And
         '''
-        p[0] = ('||', p[1], p[3])
+        #p[0] = ('||', p[1], p[3])
+        p[0] = LogicalOperation(p[1], p[3], p[2])
 
     def p_Op_Or_2(p):
         '''
@@ -947,7 +1038,8 @@ def analize(entrada):
         '''
         Op_And : Op_And AND Op_BinOR
         '''
-        p[0] = ('&&', p[1], p[3])
+        #p[0] = ('&&', p[1], p[3])
+        p[0] = LogicalOperation(p[1], p[3], p[2])
 
     def p_Op_And_2(p):
         '''
@@ -959,7 +1051,8 @@ def analize(entrada):
         '''
         Op_BinOR : Op_BinOR OR_B Op_BinXOR
         '''
-        p[0] = ('|', p[1], p[3])
+        #p[0] = ('|', p[1], p[3])
+        p[0] = BitwiseOperation(p[1], p[3], p[2])
 
     def p_Op_BinOR_2(p):
         '''
@@ -971,19 +1064,21 @@ def analize(entrada):
         '''
         Op_BinXOR : Op_BinXOR XOR_B Op_BinAND
         '''
-        p[0] = ('^', p[1], p[3])
+        #p[0] = ('^', p[1], p[3])
+        p[0] = BitwiseOperation(p[1], p[3], p[2])
 
     def p_Op_BinXOR_2(p):
         '''
         Op_BinXOR : Op_BinAND
         '''
-        p[0] = p[1]
+        p[0] = p[1]        
 
     def p_Op_BinAND_1(p):
         '''
         Op_BinAND : Op_BinAND AND_B Op_Equate
         '''
-        p[0] = ('&', p[1], p[3])
+        #p[0] = ('&', p[1], p[3])
+        p[0] = BitwiseOperation(p[1], p[3], p[2])
 
     def p_Op_BinAND_2(p):
         '''
@@ -996,7 +1091,8 @@ def analize(entrada):
         Op_Equate : Op_Equate EQUAL Op_Compare
             | Op_Equate NOT_EQUAL Op_Compare
         '''
-        p[0] = (p[2], p[1], p[3])
+        #p[0] = (p[2], p[1], p[3])
+        p[0] = RelationalOperation(p[1], p[3], p[2])
 
 
     def p_Op_Equate_2(p):
@@ -1012,7 +1108,8 @@ def analize(entrada):
             | Op_Compare LESS_EQUAL Op_Shift
             | Op_Compare GREATER_EQUAL Op_Shift
         '''
-        p[0] = (p[2], p[1], p[3])
+        #p[0] = (p[2], p[1], p[3])
+        p[0] = RelationalOperation(p[1], p[3], p[2])
 
     def p_Op_Compare_2(p):
         '''
@@ -1025,7 +1122,8 @@ def analize(entrada):
         Op_Shift : Op_Shift SHIFT_L Op_Add
             | Op_Shift SHIFT_R Op_Add
         '''
-        p[0] = (p[2], p[1], p[3])
+        #p[0] = (p[2], p[1], p[3])
+        p[0] = ShiftOperation(p[1], p[3], p[2])
 
     def p_Op_Shift_2(p):
         '''
@@ -1038,7 +1136,8 @@ def analize(entrada):
         Op_Add : Op_Add PLUS Op_Mult
             | Op_Add MINUS Op_Mult
         '''
-        p[0] = (p[2], p[1], p[3])
+        #p[0] = (p[2], p[1], p[3])
+        p[0] = ArithmeticOperation(p[1], p[3], p[2])
 
     def p_Op_Add_2(p):
         '''
@@ -1052,7 +1151,8 @@ def analize(entrada):
             | Op_Mult DIVIDE Op_Unary
             | Op_Mult REMAINDER Op_Unary
         '''
-        p[0] = (p[2], p[1], p[3])
+        #p[0] = (p[2], p[1], p[3])
+        p[0] = ArithmeticOperation(p[1], p[3], p[2])
 
     def p_Op_Mult_2(p):
         '''
@@ -1068,39 +1168,43 @@ def analize(entrada):
             | MULTIPLY Op_Unary
             | AND_B Op_Unary            
         '''
-        p[0] = (p[1], p[2])
+        #p[0] = (p[1], p[2])
+        p[0] = UnaryOperation(p[2], p[1])
 
     def p_Op_Unary_2(p):
         '''
         Op_Unary : PLUSPLUS Op_Unary
             | MINUSMINUS Op_Unary
         '''
-        p[0] = ('pre', p[1], p[2])
+        #p[0] = ('pre', p[1], p[2])
+        p[0] = PreOperation(p[2], p[1])
 
     def p_Op_Unary_3(p):
         '''
         Op_Unary : Op_Pointer PLUSPLUS
             | Op_Pointer MINUSMINUS
         '''
-        p[0] = ('post', p[2], p[1])
+        #p[0] = ('post', p[2], p[1])
+        p[0] = PostOperation(p[1], p[2])
 
     def p_Op_Unary_4(p):
         '''
         Op_Unary : L_PAR Type R_PAR Op_Unary
         '''
-        p[0] = ('cast', p[2], p[4])
+        #p[0] = ('cast', p[2], p[4])
+        p[0] = Cast(p[2], p[4])
 
     def p_Op_Unary_5(p):
         '''
         Op_Unary : SIZEOF L_PAR Type R_PAR
         '''
-        p[0] = ('sizeof', p[3])
+        p[0] = ('sizeof', p[3]) # SUPPORTED BY AUGUS? 
 
     def p_Op_Unary_6(p):
         '''
         Op_Unary : SIZEOF L_PAR NAME Pointers R_PAR
         '''
-        p[0] = ('sizeof', p[3], p[4])
+        p[0] = ('sizeof', p[3], p[4]) # SUPPORTED BY AUGUS? 
 
     def p_Op_Unary_7(p):
         '''
@@ -1111,14 +1215,20 @@ def analize(entrada):
     def p_Op_Pointer_1(p):
         '''
         Op_Pointer : Op_Pointer DOT Value
-        '''
-        p[0] = ('.', p[1], p[3])
+        '''        
+        if isinstance(p[1], Integer):
+            int1 = p[1]
+            int2 = p[3]
+            decimal = str(int1.val) + '.' + str(int2.val)
+            p[0] = Float(float(decimal))
+        else:
+            p[0] = ('.', p[1], p[3])
 
     def p_Op_Pointer_2(p):
         '''
         Op_Pointer : Op_Pointer ACCESS Value
         '''
-        p[0] = ('->', p[1], p[3])
+        p[0] = ('->', p[1], p[3]) # NO LONGER SUPPORTED BY MINORC
 
     def p_Op_Pointer_3(p):
         '''
@@ -1135,24 +1245,46 @@ def analize(entrada):
     def p_Value_1(p):
         '''
         Value : INTEGER
-            | STRING
-            | CHARACTER
-            | DECIMAL
-            | NAME
         '''
-        p[0] = p[1]
+        p[0] = Integer(p[1])
+
+    def p_Value_5(p):
+        '''
+        Value : STRING
+        '''
+        p[0] = String(p[1])
+
+    def p_Value_6(p):
+        '''
+        Value : CHARACTER
+        '''
+        p[0] = Character(p[1])
+
+    def p_Value_7(p):
+        '''
+        Value : DECIMAL
+        '''
+        p[0] = Float(p[1])
+
+    def p_Value_8(p):
+        '''
+        Value : NAME
+        '''
+        p[0] = Variable(None, p[1], None, None)
 
     def p_Value_2(p):
         '''
         Value : NAME L_PAR Expr R_PAR
         '''
-        p[0] = ('call', p[1], p[3])
+        #p[0] = ('call', p[1], p[3])
+        p[0] = Call(p[1], p[3])
 
     def p_Value_3(p):
         '''
         Value : NAME L_PAR R_PAR
         '''
-        p[0] = ('call', p[1])
+        #p[0] = ('call', p[1])
+        p[0] = Call(p[1], None)
 
     def p_Value_4(p):
         '''
@@ -1186,6 +1318,4 @@ def analize(entrada):
     parser = yacc.yacc()
     ast = parser.parse(entrada,tracking=True)
     
-    
-
     return ast

@@ -1,0 +1,13 @@
+int *a(int d, int d2){}
+int **b(){}
+int c(const signed float par1, char par2){}
+
+
+int main(){}
+
+
+
+
+
+
+

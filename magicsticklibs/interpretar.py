@@ -25,6 +25,8 @@ class InterpreterFunctions:
         self.text.configure(undo=True,autoseparators=True, maxundo=-1)
         return
 
+    
+    
     def interpretar(self, event=None):
         #showinfo("Notepad","Interpretando...")
         from .grammar import analize
@@ -34,9 +36,14 @@ class InterpreterFunctions:
         
         ast = analize(text)
         ast2 = analizeAST(text)
-        #salida_ast = analizador_ast(entrada)
 
+        from .Translator import translate
+        translate(ast)
+        
         return
+
+
+    
 
 if __name__ == '__main__':
     root = Tkinter.Tk()

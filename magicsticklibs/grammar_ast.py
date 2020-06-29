@@ -818,7 +818,7 @@ def analizeAST(entrada):
 
     def p_Printf_Param(p):
         '''
-        Printf_Param : Value
+        Printf_Param : Op_Pointer
         '''
         id = inc()
         p[0] = id
@@ -853,7 +853,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'SCANF_PARAM')
         id = inc()
         dot.node(str(id), p[1])
-        dot.edge(p[0], str(id))
+        dot.edge(str(p[0]), str(id))
 
 ########
 
@@ -1190,7 +1190,7 @@ def analizeAST(entrada):
         dot.edge(str(p[0]), str(p[1]))
         dot.edge(str(p[0]), str(id-1))
         dot.edge(str(p[0]), str(p[3]))
-        dot.edge(str(p[0]), str(p[id]))
+        #dot.edge(str(p[0]), str(p[id]))
         dot.edge(str(p[0]), str(p[5]))
 
 
@@ -1616,6 +1616,9 @@ def analizeAST(entrada):
         empty :
         '''
         p[0] = None
+
+    def p_error(p):
+        pass
 
       
 

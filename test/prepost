@@ -1,0 +1,23 @@
+int a=9,b;
+int main(){
+	char sexo;
+	int edad;
+	a++;
+	--b;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
