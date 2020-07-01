@@ -1,0 +1,9 @@
+int main(){
+	switch(op)
+	{
+		case 1:
+			printf("Hello");
+		default:
+			printf("Bye");
+	}
+}

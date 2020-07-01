@@ -11,6 +11,11 @@ import time
 import interprete as Inter
 import ts as TS
 from instrucciones import *
+######################################################
+from grammar import analize
+from grammar_ast import analizeAST
+
+from Translator import translate
 
 #==============================================================
 
@@ -40,13 +45,41 @@ def aplicarColor():
     colorearTexto("variables",r'[$][a-zA-Z0-9]+')
     colorearTexto("numero", r'\'.*?\'')
     colorearTexto("numero", r'\".*?\"')
-    colorearTexto("reservada",r'main')
-    colorearTexto("reservada",r'if')
-    colorearTexto("reservada",r'array')
-    colorearTexto("reservada",r'read')
-    colorearTexto("reservada",r'print')
-    colorearTexto("reservada",r'goto')
+    
+    colorearTexto('reservada', r'auto')
+    colorearTexto('reservada', r'break')
+    colorearTexto('reservada', r'case')
+    colorearTexto('reservada', r'char')
+    colorearTexto('reservada', r'const')
+    colorearTexto('reservada', r'continue')
+    colorearTexto('reservada', r'default')
+    colorearTexto('reservada', r'do')
+    colorearTexto('reservada', r'double')
+    colorearTexto('reservada', r'else')
+    colorearTexto('reservada', r'enum')
+    colorearTexto('reservada', r'extern')
+    colorearTexto('reservada', r'float')
+    colorearTexto('reservada', r'for')
+    colorearTexto('reservada', r'goto')
+    colorearTexto('reservada', r'if')
+    colorearTexto('reservada', r'int')
+    colorearTexto('reservada', r'printf')
+    colorearTexto('reservada', r'register')
+    colorearTexto('reservada', r'return')
+    colorearTexto('reservada', r'scanf')
+    colorearTexto('reservada', r'signed')
+    colorearTexto('reservada', r'sizeof')
+    colorearTexto('reservada', r'static')
+    colorearTexto('reservada', r'struct')
+    colorearTexto('reservada', r'typedef')
+    colorearTexto('reservada', r'switch')
+    colorearTexto('reservada', r'union')
+    colorearTexto('reservada', r'unsigned')
+    colorearTexto('reservada', r'void')
+    colorearTexto('reservada', r'volatile')
+    colorearTexto('reservada', r'while')
 
+    
 def colorearTexto(tipo,regex):
     count = IntVar(editor)
     pos = editor.index("end")
@@ -83,7 +116,12 @@ def pintar_TS_IDE():
 
 
 def ejec_ascendente():
-    print("AQUI ES")
+    cont = editor.get("1.0",END)
+    
+    ast = analize(cont)
+    analizeAST(cont)
+    translate(ast)
+
     
     '''
     global ts_debug, no_instruccion, waitForCommand, ejecucion_automatica
@@ -355,11 +393,13 @@ def ocultar_linea():
     FrameLines.config(foreground="#D5DBDB")
 
 def acerca_de():
-    MessageBox.showinfo("Augus - Compiladores 2","\n Facultad de Ingenieria, USAC \n Sergio Geovany Guoz Tubac \n201503925")
+    #MessageBox.showinfo("Augus - Compiladores 2","\n Facultad de Ingenieria, USAC \n Sergio Geovany Guoz Tubac \n201503925")
+    pass
 
 def ayuda():
-    MessageBox.showinfo("Ayuda- Augus",
-                        '''Interprete Augus - USAC. Es un interprete de codigo intermedio, basado en el lenguaje PHP y lenguaje ensamblador de MIPS.''')
+    # MessageBox.showinfo("Ayuda- Augus",
+    #                     '''Interprete Augus - USAC. Es un interprete de codigo intermedio, basado en el lenguaje PHP y lenguaje ensamblador de MIPS.''')
+    pass
 
 def nuevo():
     global pathFile
@@ -395,9 +435,10 @@ def guardar():
         archivo = open(pathFile, 'w+')         
         archivo.write(contenido)           
         archivo.close()
-        MessageBox.showinfo("Archivo guardado","El archivo se guardo exitosamente")
+        #MessageBox.showinfo("Archivo guardado","El archivo se guardo exitosamente")
     else :
-        MessageBox.showwarning("Guardar","Abra un archivo primero")
+        #MessageBox.showwarning("Guardar","Abra un archivo primero")
+        pass
 
 def guardar_como():
     global pathFile
@@ -409,9 +450,10 @@ def guardar_como():
         archivo = open(pathFile, 'w+') 
         archivo.write(contenido) 
         archivo.close()
-        MessageBox.showinfo("Archivo guardado","El archivo se guardo exitosamente")
+        #MessageBox.showinfo("Archivo guardado","El archivo se guardo exitosamente")
     else:
-        MessageBox.showinfo("Archivo no guardado - Augus","El archivo no se guardó")
+        #MessageBox.showinfo("Archivo no guardado - Augus","El archivo no se guardó")
+        pass
 
 
 def multiple_yview(*args):

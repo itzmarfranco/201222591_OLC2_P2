@@ -1,0 +1,4 @@
+int main(){
+	int a = 4 << 8;
+	int c = 4<8;
+}

@@ -1,0 +1,41 @@
+struct estudiante
+{
+	int nombre;
+};
+
+int main()
+{
+	a += 5;
+	float c = 5;
+	int test = 20;
+	if(a>1 || 8==9){
+		for(i=0; i<10; i++){
+			char c = 'a';
+		}
+		while(0==8){
+
+		}
+	}
+	else {
+
+	}
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

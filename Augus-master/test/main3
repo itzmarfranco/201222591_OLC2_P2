@@ -1,0 +1,27 @@
+struct persona
+{
+  int edad;
+  char sexo;
+};
+
+int main()
+{
+    printf("Hello World\n");
+    int a = 70;
+    struct persona p;
+    p.edad = 65;
+    p.sexo = 'm';
+    printf("%d, %c\n", p.edad, p.sexo);
+    struct s1{};
+
+    return 0;
+}
+
+
+
+
+
+
+
+
+
