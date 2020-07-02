@@ -24,6 +24,12 @@ class Table:
                 return sym
         return None
 
+    def update(self, id, newValue):
+        oldSym = self.get(id)
+        newSym = Symbol(oldSym.id, oldSym.varType, newValue, oldSym.length, oldSym.varName)
+        self.remove(oldSym)
+        self.add(newSym)
+
     def remove(self, id):
         for sym in self.symbols:
             if sym.id == id:

@@ -10,6 +10,7 @@ def write3D(str):
     f.write(str)
     f.close()
 
+
 l = 0 # counter for labels
 t = 0 # counter for $t
 a = 0 # counter for $a
@@ -51,12 +52,18 @@ callList = [] # list with all funcions called
 
 tsStack = [] # stack with ts for each enviroment
 
+breakStack = [] # stack to handle cycles and switch break statement
+
+continueStack = [] # stack to handle cycles continue statement
+
 
 #Main translate method
 def translate(instructions):
+
     global result
     global tsStack
     # global ts
+    tsStack.clear()
     ts = Table([])
     tsStack.append(ts)
 
@@ -93,6 +100,7 @@ def translateBlock(b):
             if isinstance(i, printf): translatePrintf(i)
             elif isinstance(i, scanf): translateScanf(i)
             elif isinstance(i, Goto): translateGoto(i)
+            elif isinstance(i, Label): translateLabel(i)
             elif isinstance(i, Break): translateBreak(i)
             elif isinstance(i, Continue): translateContinue(i)
             elif isinstance(i, Return): translateReturn(i)
@@ -124,7 +132,7 @@ def translateBlock(b):
                 tsStack.append(ts)
                 translateFor(i)
                 tsStack.pop()
-            elif isinstance(i, switch):
+            elif isinstance(i, Switch):
                 ts = Table([])
                 tsStack.append(ts)
                 translateSwitch(i)
@@ -192,23 +200,47 @@ def translateScanf(i):
     pass
 
 def translateGoto(i):
-    pass
+    global result
+    result.code += 'goto ' + i.ret + ';\n'
+
+def translateLabel(i):
+    global result
+    result.code += str(i.label) + ':\n'
 
 def translateBreak(i):
-    pass
+    global result
+    global breakStack
+    # if continueStack has elements, there is a valid enviroment for the continue statement
+    if len(breakStack) > 0:
+        index = len(breakStack)-1
+        label = breakStack[index]
+        result.code += 'goto ' + label + ';\n'
+    else:
+        # Error. Sentencia break en entorno inválido
+        print('Error. Sentencia break en entorno inválido')
 
 def translateContinue(i):
-    pass
+    global result
+    global continueStack
+    # if continueStack has elements, there is a valid enviroment for the continue statement
+    if len(continueStack) > 0:
+        index = len(continueStack)-1
+        label = continueStack[index]
+        result.code += 'goto ' + label + ';\n'
+    else:
+        # Error. Sentencia break en entorno inválido
+        print('Error. Sentencia continue en entorno inválido')
+
 
 def translateReturn(i):
-    pass
+    global result
+    result.code += 'return 0;\n'
 
     
 def translateVariable(i):
     global tsStack
     global result
     # get variable $tn value and set it to result
-    for t in tsStack: t.print()
     auxStack = []
     found = False
     while len(tsStack)>0:
@@ -282,8 +314,19 @@ def translateWhile(i):
     result.code += 'if(' + str(result.temp) + ') goto ' + trueLabel + ';\n' # if(t0) goto L1;
     result.code += 'goto ' + exitLabel + ':\n' #goto L2;
     result.code += trueLabel + ':\n' # L1:
-
+    ####
+    # add labels to the break and continue stacks
+    global breakStack
+    global continueStack
+    breakStack.append(exitLabel)
+    continueStack.append(returnLabel)
+    ####
     translateBlock(stm) #STM
+    ###
+    # remove labels from break and continue stacks
+    breakStack.pop()
+    continueStack.pop()
+    ###
     result.code += 'goto ' + returnLabel + ':\n' # goto ret;
     result.code += exitLabel + ':\n' # L2:
 
@@ -293,10 +336,22 @@ def translateDoWhile(i):
     translateExpressionList(exp)
     temp = result.temp
     returnLabel = create_l()
-    result.code += returnLabel + ':\n'
-    translateBlock(stm)
-    result.code += 'if(' + str(temp) + ') goto ' + returnLabel + ';\n'
     exitLabel = create_l()
+    result.code += returnLabel + ':\n'
+    ####
+    # add labels to the break and continue stacks
+    global breakStack
+    global continueStack
+    breakStack.append(exitLabel)
+    continueStack.append(returnLabel)
+    ####
+    translateBlock(stm) #STM
+    ###
+    # remove labels from break and continue stacks
+    breakStack.pop()
+    continueStack.pop()
+    ###
+    result.code += 'if(' + str(temp) + ') goto ' + returnLabel + ';\n'
     result.code += 'goto ' + exitLabel + ':\n'
     result.code += exitLabel + ':\n'
 
@@ -311,19 +366,59 @@ def translateFor(i):
     # if arg1/arg2 have variables, should be stored in ts
     returnLabel = create_l()
     result.code += returnLabel + ':\n'
-    L1 = create_l()
-    L2 = create_l()
-    result.code += 'if(' + str(arg2temp) + ') goto ' + L1 + ';\n'
-    result.code += 'goto ' + L2 + ';\n'
-    result.code += L1 + ':\n'
-    translateBlock(i.statements)
+    trueLabel = create_l()
+    exitLabel = create_l()
+    result.code += 'if(' + str(arg2temp) + ') goto ' + trueLabel + ';\n'
+    result.code += 'goto ' + exitLabel + ';\n'
+    result.code += trueLabel + ':\n'
+    ####
+    # add labels to the break and continue stacks
+    global breakStack
+    global continueStack
+    breakStack.append(exitLabel)
+    continueStack.append(returnLabel)
+    ####
+    translateBlock(i.statements) #STM
+    ###
+    # remove labels from break and continue stacks
+    breakStack.pop()
+    continueStack.pop()
+    ###
     translateExpressionList(arg3)
     result.code += 'goto ' + returnLabel + ';\n'
+    result.code += 'goto ' + exitLabel + ';\n'
 
 
 def translateSwitch(i):
-    print('traduciendo switch')
-    pass
+    global result
+    global breakStack
+    # translate case value
+    # if (switchCondition == case value) goto CASE1
+    # goto CASE2 (can be the exit label. Update where needed)
+    # CASE1:
+    # translate case statements
+    # CASE2:
+    # repeat
+    translateExpressionList(i.condition)
+    switchID = result.temp
+    exitLabel = create_l()
+    breakStack.append(exitLabel)
+    if i.cases != None:
+        for case in i.cases:
+            if case.value == 'default':
+                translateBlock(case.statements)
+            else:
+                translateExpressionList(case.value)
+                caseValue = result.temp
+                trueLabel = create_l()
+                #falseLabel = create_l()
+                result.code += 'if(' + switchID + ' == ' + caseValue + ') goto ' + trueLabel + ';\n'
+                #result.code += 'goto ' + falseLabel + ';\n'
+                result.code += trueLabel + ':\n'
+                translateBlock(case.statements)
+                #result.code += 'goto ' + falseLabel + ';\n'
+    breakStack.pop()
+    result.code += exitLabel + ':\n'
 ###################################
 def translateExpressionList(e):
     if e != None:
@@ -356,24 +451,84 @@ def translateAssignOperation(exp):
         # get $t var for exp.op1
         tsIndex = len(tsStack)-1 #last ts in the stack (current)
         while(tsIndex >= 0):
-            currentTS = tsStack[tsIndex]
-            
+            if tsStack[tsIndex].isSymbolInTable(exp.op1.id): # var is in current TS. Update
+                sym = tsStack[tsIndex].get(exp.op1.id) # symbol for exp.op1.id
+                var3dName = sym.varName # $t name for symbol
+                tsStack[tsIndex].update(exp.op1.id, exp.op2) #update symbol
+                translateExpressionList(exp.op2)
+                result.code += var3dName + ' = ' + result.temp + ';\n'
+                result.temp = var3dName # useless, really
+                break
+            else:
+                # not in current TS. Search in the next
+                tsIndex -= 1
 
     #si no es '=' crear expresión con exp.op1 exp.op2 y op dependiendo del exp.op
     else:
-        pass
-    
+        if exp.operator == '+=':
+            tempArithmetic = ArithmeticOperation(exp.op1, exp.op2, '+')
+            tempAssign = AssignOperation(exp.op1, tempArithmetic, '=')
+            translateExpressionList(tempAssign)
+        elif exp.operator == '-=':
+            tempArithmetic = ArithmeticOperation(exp.op1, exp.op2, '-')
+            tempAssign = AssignOperation(exp.op1, tempArithmetic, '=')
+            translateExpressionList(tempAssign)
+        elif exp.operator == '*=':
+            tempArithmetic = ArithmeticOperation(exp.op1, exp.op2, '*')
+            tempAssign = AssignOperation(exp.op1, tempArithmetic, '=')
+            translateExpressionList(tempAssign)
+        elif exp.operator == '/=':
+            tempArithmetic = ArithmeticOperation(exp.op1, exp.op2, '%')
+            tempAssign = AssignOperation(exp.op1, tempArithmetic, '=')
+            translateExpressionList(tempAssign)
+        elif exp.operator == '%=':
+            tempArithmetic = ArithmeticOperation(exp.op1, exp.op2, '%')
+            tempAssign = AssignOperation(exp.op1, tempArithmetic, '=')
+            translateExpressionList(tempAssign)
+        elif exp.operator == '^=':
+            tempArithmetic = BitwiseOperation(exp.op1, exp.op2, '^')
+            tempAssign = AssignOperation(exp.op1, tempArithmetic, '=')
+            translateExpressionList(tempAssign)
+        elif exp.operator == '&=':
+            tempArithmetic = BitwiseOperation(exp.op1, exp.op2, '&')
+            tempAssign = AssignOperation(exp.op1, tempArithmetic, '=')
+            translateExpressionList(tempAssign)
+        elif exp.operator == '|=':
+            tempArithmetic = BitwiseOperation(exp.op1, exp.op2, '|')
+            tempAssign = AssignOperation(exp.op1, tempArithmetic, '=')
+            translateExpressionList(tempAssign)
+        elif exp.operator == '>>=':
+            tempArithmetic = ShiftOperation(exp.op1, exp.op2, '>>')
+            tempAssign = AssignOperation(exp.op1, tempArithmetic, '=')
+            translateExpressionList(tempAssign)
+        elif exp.operator == '<<=':
+            tempArithmetic = ShiftOperation(exp.op1, exp.op2, '<<')
+            tempAssign = AssignOperation(exp.op1, tempArithmetic, '=')
+            translateExpressionList(tempAssign)
+        
 
 def translateTernaryOperation(exp):
     global result
-    translateExpressionList(exp.op1)
-    t1 = result.temp
+    # op1?op2:op3;
+    trueLabel = create_l()
+    falseLabel = create_l()
+    exitLabel = create_l()
+    conditionT = exp.op1.expressions
+    translateExpressionList(conditionT[0])
+    cond = result.temp
+    result.code += 'if( ' + cond + ' ) goto ' + trueLabel + ';\n'
+    result.code += 'goto ' + falseLabel + ';\n'
+    result.code += trueLabel + ':\n'
     translateExpressionList(exp.op2)
-    t2 = result.temp
-    t3 = create_t()
-    result.code += t3 + ' = ' + t1 + ' ' + str(exp.operator) + ' ' + t2 + ';\n'
-    result.temp = t3
-
+    resultName = result.temp
+    result.code += resultName + ' = ' + result.temp + ';\n'
+    result.code += 'goto ' + exitLabel + ';\n'
+    result.code += falseLabel + ':\n'
+    translateExpressionList(exp.op3)
+    result.code += resultName + ' = ' + result.temp + ';\n' 
+    result.code += 'goto ' + exitLabel + ';\n'
+    result.code += exitLabel + ':\n'
+    
 def translateLogicalOperation(exp):
     global result
     translateExpressionList(exp.op1)
@@ -527,7 +682,7 @@ def translateCall(exp): # func(params)
                 if f.id == id:
                    callList.append((f, params3d, cal, ret))
                    
-        result.code += ret + ':' + '\n'
+    result.code += ret + ':' + '\n'
 
 
 def translateFunctionCalled(f, parameters, callLabel , returnLabel):

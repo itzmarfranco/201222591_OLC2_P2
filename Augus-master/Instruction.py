@@ -142,17 +142,18 @@ class forr(Instruction):
         self.arg3 = arg3
         self.statements = statements
 
-class case(Instruction):
+class Case(Instruction):
 
     def __init__(self, value, statements):
         self.value = value
         self.statements = statements
 
-class switch(Instruction):
+class Switch(Instruction):
 
     def __init__(self, condition, cases):
         self.condition = condition
-        self.cases = cases
+        reversed_list = cases[::-1]
+        self.cases = reversed_list
 
 class enum(Instruction):
     
@@ -183,20 +184,25 @@ class Return():
     def __init__(self, ret):
         self.ret = ret
 
-class Break():
+class Break(Instruction):
 
     def __init__(self, ret):
         self.ret = ret
 
-class Continue():
+class Continue(Instruction):
 
     def __init__(self, ret):
         self.ret = ret
 
-class Goto():
+class Goto(Instruction):
 
     def __init__(self, ret):
         self.ret = ret
+
+class Label(Instruction):
+
+    def __init__(self, label):
+        self.label = label
 
 class PostOperation(Instruction):
 

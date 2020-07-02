@@ -1,12 +1,12 @@
+int exp = 5+25;
 int main(){
-	switch(a){
+
+	switch(exp){
 		case 1:
 			break;
 		case 2:
 			break;
 		case 3:
-			break;
-		case 4:
 			break;
 		default:
 			break;

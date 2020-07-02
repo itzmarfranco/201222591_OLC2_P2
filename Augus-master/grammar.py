@@ -22,7 +22,7 @@ import math
 lexicalErrors = ErrorList([])
 syntacticErrors = ErrorList([])
 semanticErrors = ErrorList([])
-
+caseList = [] #list for cases
 
 
 def analize(entrada):
@@ -31,6 +31,7 @@ def analize(entrada):
     lexicalErrors.clear()
     syntacticErrors.clear()
     semanticErrors.clear()
+    caseList.clear()
 
     reserved = {
         'auto': 'AUTO',
@@ -790,7 +791,7 @@ def analize(entrada):
         Stm : NAME COLON
         '''
         #p[0] = p[1]
-        p[0] = Variable(None, p[1], None, None)
+        p[0] = Label(p[1])
 
     def p_Stm_3(p):
         '''
@@ -832,7 +833,7 @@ def analize(entrada):
         Then_Stm : IF L_PAR Expr R_PAR Then_Stm ELSE Then_Stm 
         '''
         #p[0] = ('if', p[3], p[5], 'else', p[7])
-        p[0] = ifelse(p[3], p[5]. p[7])
+        p[0] = ifelse(p[3], p[5], p[7])
 
     def p_Then_Stm_2(p):
         '''
@@ -862,12 +863,16 @@ def analize(entrada):
         #p[0] = ('do', p[2], p[5])
         p[0] = dowhile(p[5], p[2])
 
+
     def p_Normal_Stm_2(p):
         '''
         Normal_Stm : SWITCH L_PAR Expr R_PAR L_CURLY Case_Stms R_CURLY         
         '''
         #p[0] = ('switch', p[3], p[6])
-        p[0] = switch(p[3], p[6])
+        # p[6] = (case,(case,(case,case_default)))
+        #p[0] = Switch(p[3], p[6])
+        global caseList
+        p[0] = Switch(p[3], caseList)
 
     def p_Normal_Stm_3(p):
         '''
@@ -885,25 +890,25 @@ def analize(entrada):
         '''
         Normal_Stm : GOTO NAME SEMICOLON
         '''
-        p[0] = ('goto', p[2])
+        p[0] = Goto(p[2])
 
     def p_Normal_Stm_6(p):
         '''
         Normal_Stm : BREAK SEMICOLON
         '''
-        p[0] = ('break')
+        p[0] = Break('break')
 
     def p_Normal_Stm_7(p):
         '''
         Normal_Stm : CONTINUE SEMICOLON
         '''
-        p[0] = ('continue')
+        p[0] = Continue('continue')
 
     def p_Normal_Stm_8(p):
         '''
         Normal_Stm : RETURN Expr SEMICOLON
         '''
-        p[0] = ('return', p[2])
+        p[0] = Return(p[2])
 
     def p_Normal_Stm_9(p):
         '''
@@ -927,13 +932,20 @@ def analize(entrada):
         '''
         Case_Stms : CASE Value COLON Stm_List Case_Stms
         '''
-        p[0] = ('case', p[2], p[4], p[5])
+        #p[0] = ('case', p[2], p[4], p[5])
+        global caseList
+        caseList.append(Case(p[2], p[4]))        
+        p[0] = (Case(p[2], p[4]), p[5])
+
 
     def p_Case_Stms_2(p):
         '''
         Case_Stms : DEFAULT COLON Stm_List                  
         '''
-        p[0] = ('default', p[3])
+        #p[0] = ('case', 'default', p[3], None)
+        global caseList
+        caseList.append(Case('default', p[3]))
+        p[0] = Case('default', p[3])
 
 
     def p_Case_Stms_3(p):
@@ -996,6 +1008,7 @@ def analize(entrada):
             | Op_If AMINUS Op_Assign
             | Op_If AMULTIPLY Op_Assign
             | Op_If ADIVIDE Op_Assign
+            | Op_If AREMAINDER Op_Assign
             | Op_If AXOR Op_Assign
             | Op_If AAND Op_Assign
             | Op_If AOR Op_Assign
