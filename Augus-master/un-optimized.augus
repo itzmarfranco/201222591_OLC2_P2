@@ -1,20 +1,11 @@
 main:
-$t1 = 0;
-print("Ingrese algo por favor: ");
-$t1 = read();
-print($t1);
-print("");
-exit;
-
-
-#############
-main:
-$t2 = 0;
-print("Ingrese algo por favor: ");
-$t2 = read();
-print($t2);
-print("");
-exit;
-
-
-#############
+$t1 = 420;
+$t2 = $t1;
+print("TEST PRINT 1");
+print("Entero = 55");
+$t3 = 420;
+print($t3);
+print("Caracter = ");
+print("Cadena = hola");
+label1:
+label3:

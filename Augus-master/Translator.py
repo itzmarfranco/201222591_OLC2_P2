@@ -47,6 +47,7 @@ class code3D():
     def __init__(self):
         self.code = ''
         self.temp = ''
+        self.ret = ''
 
 
 result = code3D()
@@ -94,6 +95,9 @@ def translate(instructions):
             translateFunctionCalled(f[0], f[1], f[2], f[3])
             
     print(result.code)
+
+    print(callList)
+
     print('###################################\nTABLAS DE SIMBOLOS')
     for t in tsStack:
         t.print()
@@ -242,7 +246,7 @@ def translatePrintf(i):
                             translateExpressionList(sym.value)
                             result.code += 'print(' + result.temp + ');\n'
                     elif isinstance(p,Call):
-                        pass
+                        translateCall(p)
 
                     tsIndex -= 1
 
@@ -780,11 +784,15 @@ def translateFloat(exp): # 5.69785
 
 def translateCall(exp): # func(params)
     #declarar parámetros
+    
     global result
     global callList
     id = exp.id
     params = exp.parameters
+    fun = None
     params3d = []
+    cal = create_l()
+    ret = create_l()
     if params != None:
         for p in params:
             a = create_a()
@@ -792,24 +800,23 @@ def translateCall(exp): # func(params)
             result.code += a + ' = ' + str(p.id) + ' ;' + '\n'
             # add parameter to the call
             params3d.append(a)
-        # return label for function
-        cal = create_l()
-        ret = create_l()
-        result.code += 'goto ' + cal + ';\n'
+        
         # translate function with id = id
         if len(functionList) > 0:
             for f in functionList:
                 if f.id == id:
-                   callList.append((f, params3d, cal, ret))
-                   
+                    fun = f
+                    break
+    callList.append((fun, params3d, cal, ret))
+    # return label for function
+    result.code += 'goto ' + cal + ';\n'
     result.code += ret + ':' + '\n'
 
 
 def translateFunctionCalled(f, parameters, callLabel , returnLabel):
     global result
     result.code += callLabel + ':\n'
-    # replace variables
-    replaceVariables(f, parameters)
+    #replaceVariables(f, parameters)
     result.code += 'goto ' + str(returnLabel) + ';\n'
     pass
 
