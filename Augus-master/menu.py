@@ -124,6 +124,9 @@ def ejec_ascendente():
         file1 = open('un-optimized.augus', 'w')
         file1.write(fileAugus)
         file1.close()
+        
+        from Optimizer import optimize
+
     else:
         fileAugus = ''
 

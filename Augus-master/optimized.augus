@@ -1,12 +1,10 @@
 main:
 $t1="Hello";
 $t2=$t1;
-if($t99) goto EXIT;
 $t4=$t3;
-goto ETIQUETA;
 $t5=4;
-EXIT2:
 $t6=4;
-ETIQUETA:
 $t7=1;
-EXIT:
+exit;
+
+
