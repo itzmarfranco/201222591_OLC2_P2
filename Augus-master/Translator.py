@@ -225,8 +225,7 @@ def translatePrintf(i):
     global tsStack
     data = i.string
     parameters = i.parameters
-    splittedData = re.split(r'%[c] | %[d] | %[f] | %[s]', data)
-    print(splittedData)
+    splittedData = re.split('%c|%s|%d|%s', data)
     if len(parameters) == 0:
         result.code += 'print(\"' + str(data) + '\");\n'
     else:
@@ -236,31 +235,61 @@ def translatePrintf(i):
             if isPrimitive(p): valueList.append(p.val)
             else:
                 tsIndex = len(tsStack)-1
-                if isinstance(p, Variable):
-                    pass
-                elif isinstance(p,Call):
-                    pass
+                while tsIndex >= 0:
+                    if isinstance(p, Variable):
+                        if tsStack[tsIndex].isSymbolInTable(p.id):
+                            sym = tsStack[tsIndex].get(p.id)
+                            translateExpressionList(sym.value)
+                            result.code += 'print(' + result.temp + ');\n'
+                    elif isinstance(p,Call):
+                        pass
+
+                    tsIndex -= 1
 
         newData = weave(splittedData, valueList)
-        print(newData)
+        resultString = ''
+        for s in newData:
+            resultString += str(s)
+        result.code += 'print(\"' + resultString + '\");\n'
     
     
 def weave(list1, list2):
     result = []
     i = 0
     while i <= len(list1):
-        result.append(list1[i])
-        result.append(list2[i])
+        try:
+            result.append(list1[i])
+            result.append(list2[i])
+            i += 1
+            if i == len(list2):
+                result = result + list1[i::]
+                break
+        except:
+            pass
         i += 1
-        if i == len(list2):
-             result = result + list1[i::]
-             break
     
     return result
  
 def translateScanf(i):
-    print('traduciendo scanf')
-    pass
+    global result
+    global tsStack
+
+    string = i.string
+    var = i.parameter[1]
+    result.code += 'print(\"' + string + '\");\n'
+    tsIndex = len(tsStack)-1
+    while tsIndex >= 0:
+        if tsStack[tsIndex].isSymbolInTable(var):
+            sym = tsStack[tsIndex].get(var)
+            result.code += sym.varName + ' = read();\n'
+            result.temp = sym.varName
+        else:
+            global semanticErrors
+            e = Error('No existe la variable para SCANF: '+str(var)+'.',0,0)
+            semanticErrors.add(e)
+
+        tsIndex -= 1
+    
 
 def translateGoto(i):
     global result
@@ -329,7 +358,7 @@ def translateVariable(i):
 
     if(not found):
         print("Traduciendo variable. No existe la variable: ", i.id)
-        e = Error('No exite la variable '+str(i.id), 0, 0)
+        e = Error('No exite la variable utilizada'+str(i.id)+'.', 0, 0)
         global semanticErrors
         semanticErrors.add(e)
 
@@ -701,7 +730,7 @@ def translatePostOperation(exp):
 
         if(not found):
             print("Traduciendo pre/post. No existe la variable:", exp.val)
-            e = Error('No existe la variable '+str(exp.val), 0, 0)
+            e = Error('No existe la variable para operación pre/post: '+str(exp.val)+'.', 0, 0)
             global semanticErrors
             semanticErrors.add(e)
 

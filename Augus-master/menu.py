@@ -401,7 +401,7 @@ def ocultar_linea():
     FrameLines.config(foreground="#D5DBDB")
 
 def acerca_de():
-    #MessageBox.showinfo("Augus - Compiladores 2","\n Facultad de Ingenieria, USAC \n Sergio Geovany Guoz Tubac \n201503925")
+    MessageBox.showinfo("MinorC","\n Kairi Franco 201222591 \n Proyecto base por: Sergio Guoz")
     pass
 
 def ayuda():
@@ -626,7 +626,7 @@ consola.pack(side=LEFT)
 consola_font = Font(family="Helvetica", size=10, weight="normal" )
 consola.config(width=95,height=11,padx=1, pady=3, font=consola_font, cursor="arrow",borderwidth=7,
                 selectbackground="black",background="black", foreground="white")
-consola.insert('end','>> Augus v1 - Compiladores 2 - USAC \n>>')
+consola.insert('end','>> MinorC\n>>')
 consola.bind("<Return>",comando_ingresado)
 consola.config(insertbackground="white")
 

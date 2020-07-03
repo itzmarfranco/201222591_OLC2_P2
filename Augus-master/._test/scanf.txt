@@ -1,0 +1,7 @@
+char variable[];
+int main()
+{
+
+	scanf("Ingrese algo por favor: ", &variable);
+	printf("%s",variable);
+}

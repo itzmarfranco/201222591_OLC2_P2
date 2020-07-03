@@ -1,12 +1,20 @@
 main:
-$t1="Hello";
-$t2=$t1;
-if($t99) goto EXIT;
-$t4=$t3;
-goto ETIQUETA;
-$t5=4;
-EXIT2:
-$t6=4;
-ETIQUETA:
-$t7=1;
-EXIT:
+$t1 = 0;
+print("Ingrese algo por favor: ");
+$t1 = read();
+print($t1);
+print("");
+exit;
+
+
+#############
+main:
+$t2 = 0;
+print("Ingrese algo por favor: ");
+$t2 = read();
+print($t2);
+print("");
+exit;
+
+
+#############

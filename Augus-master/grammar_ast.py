@@ -906,9 +906,9 @@ def analizeAST(entrada):
         '''
         id = inc()
         p[0] = id
-        dot.node(str(id), 'SCANF_PARAM &')
+        dot.node(str(id), 'SCANF_PARAM')
         dot.edge(str(id), p[2])
-        log.append('<tr><td>SCANF_PARAM : & name</td><td>p[0] = (&, p[1])</td><td>'+ str(p.lineno(0)) +'</td><td>Parametro para scanf()</td></tr>')
+        log.append('<tr><td>SCANF_PARAM : name</td><td>p[0] = (p[1])</td><td>'+ str(p.lineno(0)) +'</td><td>Parametro para scanf()</td></tr>')
 
     def p_Scanf_Param_2(p):
         '''
