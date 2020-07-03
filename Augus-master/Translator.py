@@ -4,6 +4,11 @@ from Expression import *
 from SymbolTable import Table, Symbol
 from Error import Error, ErrorList
 
+import re
+
+from graphviz import Digraph
+import pydotplus
+
 #method to wrote file
 def write3D(str):
     f = open('3d.augus', 'a+')
@@ -56,6 +61,8 @@ breakStack = [] # stack to handle cycles and switch break statement
 
 continueStack = [] # stack to handle cycles continue statement
 
+semanticErrors = ErrorList([])
+
 
 #Main translate method
 def translate(instructions):
@@ -92,9 +99,14 @@ def translate(instructions):
         t.print()
         print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& FIN &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
 
+    semanticErrorReport()
+    
+    return result.code
+
 ###################################
 
 def translateBlock(b):
+    global result
     if b != None:
         for i in b:
             if isinstance(i, printf): translatePrintf(i)
@@ -110,32 +122,44 @@ def translateBlock(b):
             elif isinstance(i, iff):
                 ts = Table([])
                 tsStack.append(ts)
+                result.code += '# INICIO DE IF\n'
                 translateIf(i)
+                result.code += '# FIN DE IF\n'
                 tsStack.pop()
             elif isinstance(i, ifelse):
                 ts = Table([])
                 tsStack.append(ts)
+                result.code += '# INICIO DE IF-ELSE\n'
                 translateIfElse(i)
+                result.code += '# FIN DE IF-ELSE\n'
                 tsStack.pop()
             elif isinstance(i, whilee):
                 ts = Table([])
                 tsStack.append(ts)
+                result.code += '# INICIO DE WHILE\n'
                 translateWhile(i)
+                result.code += '# FIN DE WHILE\n'
                 tsStack.pop()
             elif isinstance(i, dowhile):
                 ts = Table([])
                 tsStack.append(ts)
+                result.code += '# INICIO DE DO-WHILE\n'
                 translateDoWhile(i)
+                result.code += '# FIN DE DO-WHILE\n'
                 tsStack.pop()
             elif isinstance(i, forr):
                 ts = Table([])
                 tsStack.append(ts)
+                result.code += '# INICIO DE FOR\n'
                 translateFor(i)
+                result.code += '# FIN DE FOR\n'
                 tsStack.pop()
             elif isinstance(i, Switch):
                 ts = Table([])
                 tsStack.append(ts)
+                result.code += '# INICIO DE SWITCH\n'
                 translateSwitch(i)
+                result.code += '# INICIO DE SWITCH\n'
                 tsStack.pop()
             elif isinstance(i, Call):
                 translateCall(i)
@@ -184,17 +208,56 @@ def translateVarDec(v):
                 result.code += var3d + ' = ' + result.temp + ';\n'
             else:
                 result.code += var3d + ' = 0;\n'
-            sym = Symbol(var.id, v.varType, var.exp, 1, var3d)
+            l = 1
+            if var.array != None: l = 2
+            sym = Symbol(var.id, v.varType, var.exp, l, var3d)
             tsStack[len(tsStack)-1].add(sym)
-        else: print('Error. La variable ya existe:', var)
+        else:
+            print('Error. La variable ya existe:', var)
+            e = Error('La variable '+str(var)+' ya existe', 0, 0)
+            global semanticErrors
+            semanticErrors.add(e)
 
+ ####################################       
 
-    
-###################################
 def translatePrintf(i):
-    print('traduciendo printf')
-    pass
+    global result
+    global tsStack
+    data = i.string
+    parameters = i.parameters
+    splittedData = re.split(r'%[c] | %[d] | %[f] | %[s]', data)
+    print(splittedData)
+    if len(parameters) == 0:
+        result.code += 'print(\"' + str(data) + '\");\n'
+    else:
+        #get values for elements in parameters
+        valueList = []
+        for p in parameters:
+            if isPrimitive(p): valueList.append(p.val)
+            else:
+                tsIndex = len(tsStack)-1
+                if isinstance(p, Variable):
+                    pass
+                elif isinstance(p,Call):
+                    pass
 
+        newData = weave(splittedData, valueList)
+        print(newData)
+    
+    
+def weave(list1, list2):
+    result = []
+    i = 0
+    while i <= len(list1):
+        result.append(list1[i])
+        result.append(list2[i])
+        i += 1
+        if i == len(list2):
+             result = result + list1[i::]
+             break
+    
+    return result
+ 
 def translateScanf(i):
     print('traduciendo scanf')
     pass
@@ -218,6 +281,9 @@ def translateBreak(i):
     else:
         # Error. Sentencia break en entorno inválido
         print('Error. Sentencia break en entorno inválido')
+        e = Error('Error. Sentencia break en entorno inválido', 0, 0)
+        global semanticErrors
+        semanticErrors.add(e)
 
 def translateContinue(i):
     global result
@@ -230,6 +296,9 @@ def translateContinue(i):
     else:
         # Error. Sentencia break en entorno inválido
         print('Error. Sentencia continue en entorno inválido')
+        e = Error('Error. Sentencia break en entorno inválido', 0, 0)
+        global semanticErrors
+        semanticErrors.add(e)
 
 
 def translateReturn(i):
@@ -249,7 +318,7 @@ def translateVariable(i):
         if ts.isSymbolInTable(i.id): #var is in ts
             var3dName = ts.get(i.id).varName #varName is the 3D name for the variable
             result.temp = var3dName
-            print('variable encontrada', var3dName)
+            #print('variable encontrada', var3dName)
             found = True
             break
 
@@ -258,7 +327,11 @@ def translateVariable(i):
             tsStack.append(auxStack.pop())
             if len(auxStack) == 0: break
 
-    if(not found): print("Traduciendo variable. No existe la variable: ", i.id)
+    if(not found):
+        print("Traduciendo variable. No existe la variable: ", i.id)
+        e = Error('No exite la variable '+str(i.id), 0, 0)
+        global semanticErrors
+        semanticErrors.add(e)
 
 
 def translateIf(i):
@@ -271,7 +344,7 @@ def translateIf(i):
     trueLabel = create_l()
     result.code += 'if(' + str(result.temp) + ') goto ' + trueLabel + ';\n'
     falseLabel = create_l()
-    result.code += 'goto ' + falseLabel + '\n'
+    result.code += 'goto ' + falseLabel + ';\n'
     result.code += trueLabel + ':\n'
     # True instructions
     if i.statements != None:
@@ -288,13 +361,13 @@ def translateIfElse(i):
     result.code += 'if(' + str(result.temp) + ') goto ' + trueLabel + ';\n'
     falseLabel = create_l()
     exitLabel = create_l()
-    result.code += 'goto ' + falseLabel + ':\n'
+    result.code += 'goto ' + falseLabel + ';\n'
     result.code += trueLabel + ':\n'
     # True instructions
     if i.statementsTrue != None:
         translateBlock(i.statementsTrue)
 
-    result.code += 'goto ' + exitLabel + ':\n'
+    result.code += 'goto ' + exitLabel + ';\n'
 
     result.code += falseLabel + ':\n'
     if i.statementsFalse != None:
@@ -306,13 +379,13 @@ def translateWhile(i):
     global result
     exp = i.condition.expressions[0]
     stm = i.statements
-    translateExpressionList(exp) # t0 = exp
     returnLabel = create_l() 
     result.code += returnLabel + ':\n' # ret:
+    translateExpressionList(exp) # t0 = exp    
     trueLabel = create_l()
     exitLabel = create_l()
     result.code += 'if(' + str(result.temp) + ') goto ' + trueLabel + ';\n' # if(t0) goto L1;
-    result.code += 'goto ' + exitLabel + ':\n' #goto L2;
+    result.code += 'goto ' + exitLabel + ';\n' #goto L2;
     result.code += trueLabel + ':\n' # L1:
     ####
     # add labels to the break and continue stacks
@@ -327,17 +400,18 @@ def translateWhile(i):
     breakStack.pop()
     continueStack.pop()
     ###
-    result.code += 'goto ' + returnLabel + ':\n' # goto ret;
+    result.code += 'goto ' + returnLabel + ';\n' # goto ret;
     result.code += exitLabel + ':\n' # L2:
 
 def translateDoWhile(i):
     exp = i.condition.expressions[0]
+    returnLabel = create_l()
+    result.code += returnLabel + ':\n'
     stm = i.statements
     translateExpressionList(exp)
     temp = result.temp
-    returnLabel = create_l()
     exitLabel = create_l()
-    result.code += returnLabel + ':\n'
+    
     ####
     # add labels to the break and continue stacks
     global breakStack
@@ -352,20 +426,19 @@ def translateDoWhile(i):
     continueStack.pop()
     ###
     result.code += 'if(' + str(temp) + ') goto ' + returnLabel + ';\n'
-    result.code += 'goto ' + exitLabel + ':\n'
+    result.code += 'goto ' + exitLabel + ';\n'
     result.code += exitLabel + ':\n'
 
 def translateFor(i):
     global result
     arg1 = i.arg1.expressions[0]
     arg2 = i.arg2.expressions[0]
-    arg2temp = result.temp
     arg3 = i.arg3.expressions[0]
     translateExpressionList(arg1) # t0 = arg1
-    translateExpressionList(arg2) # t1 = arg2
-    # if arg1/arg2 have variables, should be stored in ts
     returnLabel = create_l()
     result.code += returnLabel + ':\n'
+    translateExpressionList(arg2) # t1 = arg2
+    arg2temp = result.temp
     trueLabel = create_l()
     exitLabel = create_l()
     result.code += 'if(' + str(arg2temp) + ') goto ' + trueLabel + ';\n'
@@ -386,7 +459,7 @@ def translateFor(i):
     ###
     translateExpressionList(arg3)
     result.code += 'goto ' + returnLabel + ';\n'
-    result.code += 'goto ' + exitLabel + ';\n'
+    result.code += exitLabel + ':\n'
 
 
 def translateSwitch(i):
@@ -433,6 +506,7 @@ def translateExpressionList(e):
         elif isinstance(e, PreOperation): translatePreOperation(e)
         elif isinstance(e, PostOperation): translatePostOperation(e)
         elif isinstance(e, Cast): translateCast(e)
+        elif isinstance(e, Sizeof): translateSizeof(e)
         elif isinstance(e, Integer): translateInteger(e)
         elif isinstance(e, String): translateString(e)
         elif isinstance(e, Character): translateCharacter(e)
@@ -625,14 +699,31 @@ def translatePostOperation(exp):
                 tsStack.append(auxStack.pop())
                 if len(auxStack) == 0: break
 
-        if(not found): print("Traduciendo pre/post. No existe la variable:", exp.val)
+        if(not found):
+            print("Traduciendo pre/post. No existe la variable:", exp.val)
+            e = Error('No existe la variable '+str(exp.val), 0, 0)
+            global semanticErrors
+            semanticErrors.add(e)
+
                        
+
+def translateSizeof(exp):
+    global result
+    t = create_t()
+    if exp.varType == 'int':
+        result.code += t + ' = ' + '4' + ';\n'
+    elif exp.varType == 'float':
+        result.code += t + ' = ' + '4' + ';\n'
+    elif exp.varType == 'char':
+        result.code += t + ' = ' + '1' + ';\n'
+    else:
+        result.code += t + ' = ' + '0' + ';\n'
+    result.temp = t
 
 def translateCast(exp):
     global result
     translateExpressionList(exp.exp)
     result.code += '(' + str(exp.varType) + ')' + str(result.temp) + ';\n'
-    pass
 
 def translateInteger(exp):
     global result
@@ -675,7 +766,7 @@ def translateCall(exp): # func(params)
         # return label for function
         cal = create_l()
         ret = create_l()
-        result.code += 'goto ' + cal + ';' + '\n'
+        result.code += 'goto ' + cal + ';\n'
         # translate function with id = id
         if len(functionList) > 0:
             for f in functionList:
@@ -708,3 +799,16 @@ def isPrimitive(i):
     elif isinstance(i, Character): return True
     elif isinstance(i, String): return True
     else: return False
+
+
+def semanticErrorReport():
+    global semanticErrors
+    dotDataErrors = 'digraph{tbl[shape=plaintext\nlabel=<<table><tr><td colspan=\'3\'>Reporte de errores</td></tr>'
+    dotDataErrors = dotDataErrors + '<tr><td>Error</td><td>Tipo</td><td>Linea</td></tr>'
+    for e in semanticErrors.errors:
+        dotDataErrors += '<tr><td>'+str(e.value)+'</td><td>Semantico</td><td>'+str(e.line)+'</td></tr>'
+
+    dotDataErrors = dotDataErrors + '</table>>];}'
+
+    errorGraph = pydotplus.graph_from_dot_data(dotDataErrors)
+    errorGraph.write_pdf('Reporte_Errores_S.pdf')

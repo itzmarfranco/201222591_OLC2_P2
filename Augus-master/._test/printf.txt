@@ -1,0 +1,11 @@
+char niNombre(){
+}
+
+int main(){
+	int entero = 420;
+	printf("TEST PRINT 1");
+	printf("Entero = %d", 55);	
+	printf("Caracter = %d", entero);	
+	printf("Cadena = %s", "hola");	
+	printf("Cadena = %s", miNombre());	
+}

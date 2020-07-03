@@ -8,6 +8,8 @@ import os
 from graphviz import Digraph
 import pydotplus
 
+from Error import Error, ErrorList
+
 i = 0
 def inc():
     global i
@@ -64,9 +66,9 @@ def analizeAST(entrada):
         'L_CURLY', # {
         'R_CURLY', # }
         'ASSIGN', # =
-        'ACCESS', # ->
-        'COMMENT', # //comment
-        'COMMENT_MULTI', # /*....*/
+        'ACCESS', # :
+        # 'COMMENT', # //comment
+        # 'COMMENT_MULTI', # /*....*/
         'NAME', # id
 
         'PLUS', # +
@@ -111,8 +113,8 @@ def analizeAST(entrada):
         
         'L_BRACKET', # [
         'R_BRACKET', # ]
-        'QUOTE_1', # '
-        'QUOTE_2', # "
+        # 'QUOTE_1', # '
+        # 'QUOTE_2', # "
 
         'INTEGER', # 1 2 3...
         'DECIMAL', # 1.54...
@@ -132,7 +134,7 @@ def analizeAST(entrada):
     t_L_CURLY = r'\{'
     t_R_CURLY = r'\}'
     t_ASSIGN = r'\=' # =
-    t_ACCESS = r'\-\>' # ->
+    t_ACCESS = r'\-\>' # :
     #COMMENT = r'\/\/' # //comment
     #NAME = r'\c' # id
     t_PLUS = r'\+' # +
@@ -170,8 +172,8 @@ def analizeAST(entrada):
     t_SHIFT_R = r'\>\>' # >>
     t_L_BRACKET = r'\[' # [
     t_R_BRACKET = r'\]' # ]
-    t_QUOTE_1 = r'\"' # 
-    t_QUOTE_2 = r'\'' # "
+    # t_QUOTE_1 = r'\"' # 
+    # t_QUOTE_2 = r'\'' # "
     #INTEGER = r'\c' # 1 2 3...
     #DECIMAL = r'\c' # 1.54...
     #STRING = r'\c' # hello
@@ -225,16 +227,20 @@ def analizeAST(entrada):
     def find_column(input, token):
         line_start = input.rfind('\n', 0, token.lexpos) + 1
         return (token.lexpos - line_start) + 1
-        
+
+    lexicalErrors = ErrorList([])
+    syntacticErrors = ErrorList([])  
     # Skip the current token and output 'Illegal characters' using the special Ply t_error function.
     def t_error(t):
         #print("Illegal characters!")
         t.lexer.skip(1)
-        #error = Error('Caracter no permitido: '+ str(t.value[0]), t.lineno,0)
-        #lexicalErrors.add(error)
+        error = Error('Caracter no permitido: '+ str(t.value[0]), t.lineno, 0)
+        lexicalErrors.add(error)
 
     # Build the lexer
     log = []
+
+    
     #from .ply import lex as lex
     import ply.lex as lex
     lexer = lex.lex()
@@ -267,12 +273,14 @@ def analizeAST(entrada):
         dot.node(str(id), 'DECLS')
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[2]))
+        log.append('<tr><td>DECLS : DECL DECLS</td><td>p[0] = (p[1], p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Lista de instrucciones</td></tr>')
 
     def p_Decls_2(p):
         '''
         Decls : empty
         '''
         p[0] = None
+        log.append('<tr><td>DECLS : empty</td><td>p[0] = None</td><td>'+ str(p.lineno(0)) +'</td><td>Producccion vacia</td></tr>')
 
     def p_Decl(p):
         '''
@@ -288,6 +296,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'DECL')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>DECL : FUN_DECL |STRUCT_DECL|UNION_DECL|VAR_DECL|ENUM_DECL</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Instrucciones generales</td></tr>')
 
     # ===================================================================
     # Function  Declaration
@@ -300,6 +309,7 @@ def analizeAST(entrada):
             | Func_ID L_PAR R_PAR SEMICOLON
         '''
 
+
     def p_Func_Decl_1(p):
         '''
         Func_Decl : Func_ID L_PAR Params  R_PAR Block
@@ -310,6 +320,7 @@ def analizeAST(entrada):
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[3]))
         dot.edge(str(id), str(p[5]))
+        log.append('<tr><td>FUN_DECL : FUN_ID ( PARAMS ) BLOCK</td><td>p[0] = (p[1], p[3], p[5])</td><td>'+ str(p.lineno(0)) +'</td><td>Declaracion de funcion</td></tr>')
 
     def p_Func_Decl_2(p):
         '''
@@ -332,6 +343,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'FUNC_DECL')
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[4]))
+        log.append('<tr><td>FUN_DECL : FUN_ID (  ) BLOCK</td><td>p[0] = (p[1], p[3], p[5])</td><td>'+ str(p.lineno(0)) +'</td><td>Declaracion de funcion sin parametros</td></tr>')
 
     def p_Params_1(p):
         '''
@@ -342,6 +354,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'PARAMS')
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[3]))
+        log.append('<tr><td>PARAMS : PARAM , PARAMS</td><td>p[0] = (p[1], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Lista de parametros</td></tr>')
 
     def p_Params_2(p):
         '''
@@ -351,6 +364,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'PARAMS')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>PARAMS : PARAM</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Parametro</td></tr>')
 
     def p_Param_1(p):
         '''
@@ -362,6 +376,7 @@ def analizeAST(entrada):
         dot.edge(str(id), 'const')
         dot.edge(str(id), str(p[2]))
         dot.edge(str(id), str(p[3]))
+        log.append('<tr><td>PARAM :</td><td>p[0] = (const, p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Parametro de funcion</td></tr>')
 
     def p_Param_2(p):
         '''
@@ -372,6 +387,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'PARAM')
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[2]))
+        log.append('<tr><td>PARAM : TYPE name</td><td>p[0] = (p[1], p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Parametro de funcion</td></tr>')
 
     def p_Types_1(p):
         '''
@@ -382,6 +398,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'TYPES')
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[3]))
+        log.append('<tr><td>TYPES : TYPES , TYPE</td><td>p[0] = (p[1], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Listado de tipos</td></tr>')
 
     def p_Types_2(p):
         '''
@@ -391,6 +408,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'TYPES')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>TYPES : TYPE</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Tipo</td></tr>')
 
     def p_Id_List_1(p):
         '''
@@ -402,6 +420,7 @@ def analizeAST(entrada):
         id = inc()
         dot.node(str(id), str(p[1]))
         dot.edge(str(id-1), str(p[3]))
+        log.append('<tr><td>ID_LIST : name , ID_LIST</td><td>p[0] = (p[1], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Lista de variables</td></tr>')
 
     def p_Id_List_2(p):
         '''
@@ -411,6 +430,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'ID_LIST')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>ID_LIST : name</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Variable</td></tr>')
 
     def p_Func_ID_1(p):
         '''
@@ -421,6 +441,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'FUNC_ID')
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[2]))
+        log.append('<tr><td>FUNC_ID : TYPE name</td><td>p[0] = (p[1], p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Identificador de funcion</td></tr>')
 
     def p_Func_ID_2(p):
         '''
@@ -430,6 +451,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'FUNC_ID')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>FUNC_ID : name</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Identificador de funcion</td></tr>')
 
     # ===================================================================
     # Type Declaration
@@ -453,6 +475,7 @@ def analizeAST(entrada):
         dot.edge(str(p[0]), str(id))
         dot.edge(str(p[0]), str(p[2]))
         dot.edge(str(p[0]), str(p[4]))
+        log.append('<tr><td>STRUCT_DECL : struct name { STRUCT_DEF } ;</td><td>p[0] = (struct,p[2], p[4])</td><td>'+ str(p.lineno(0)) +'</td><td>Struct</td></tr>')
 
     def p_Union_Decl(p):
         '''
@@ -464,6 +487,7 @@ def analizeAST(entrada):
         dot.edge(str(id), 'union')
         dot.edge(str(id), str(p[2]))
         dot.edge(str(id), str(p[4]))
+        log.append('<tr><td>UNION_DECL : union name { STRUCT_DEF } ;</td><td>p[0] = (union, p[2], p[4])</td><td>'+ str(p.lineno(0)) +'</td><td>Union</td></tr>')
 
     def p_Struct_Def_1(p):
         '''
@@ -474,6 +498,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'STRUCT_DEF')
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[2]))
+        log.append('<tr><td>STRUCT_DEF : VAR_DECL STRUCT_DEF</td><td>p[0] = (p[1], p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Lista de variables de struct</td></tr>')
 
     def p_Struct_Dec2(p):
         '''
@@ -483,6 +508,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'STRUCT_DEF')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>STRUCT_DEf : VAR_DECL</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Declaracion de variable de struct</td></tr>')
 
     # ===================================================================
     # Variable Declaration
@@ -499,6 +525,7 @@ def analizeAST(entrada):
         dot.edge(str(id), str(p[2]))
         dot.edge(str(id), str(p[3]))
         dot.edge(str(id), str(p[4]))
+        log.append('<tr><td>VAR_DECL : MOD TYPE VAR VARLIST ;</td><td>p[0] = (p[1], p[2], p[3], p[4])</td><td>'+ str(p.lineno(0)) +'</td><td>Declaracion de variable</td></tr>')
 
     def p_Var_Decl_2(p):
         '''
@@ -510,6 +537,7 @@ def analizeAST(entrada):
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[2]))
         dot.edge(str(id), str(p[3]))
+        log.append('<tr><td>VAR_DECL : TYPE VAR VARLIST ;</td><td>p[0] = (p[1], p[2], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Declaracion de variable</td></tr>')
 
     def p_Var_Decl_3(p):
         '''
@@ -521,6 +549,7 @@ def analizeAST(entrada):
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[2]))
         dot.edge(str(id), str(p[3]))
+        log.append('<tr><td>VAR_DECL : MOD VAR VARLIST ;</td><td>p[0] = (p[1], p[2], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Declaracion de variable</td></tr>')
 
     def p_Var_1(p):
         '''
@@ -532,6 +561,7 @@ def analizeAST(entrada):
         id = inc()
         dot.node(str(id), str(p[1]))
         dot.edge(str(p[0]), str(id))
+        log.append('<tr><td>VAR : name ARRAY</td><td>p[0] = (p[1], p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Variable como arreglo</td></tr>')
     
     def p_Var_2(p):
         '''
@@ -544,6 +574,7 @@ def analizeAST(entrada):
         dot.node(str(id), str(p[1]))
         dot.edge(str(p[0]), str(id))
         dot.edge(str(p[0]), str(p[4]))
+        log.append('<tr><td>VAR : name ARRAY = OP_IF</td><td>p[0] = (=, p[1], p[2], p[4])</td><td>'+ str(p.lineno(0)) +'</td><td>Variable como arreglo y asignacion</td></tr>')
 
     def p_Array_1(p):
         '''
@@ -555,6 +586,7 @@ def analizeAST(entrada):
         dot.edge(str(id), '[')
         dot.edge(str(id), str(p[2]))
         dot.edge(str(id), ']')
+        log.append('<tr><td>ARRAY : [ EXPR ]</td><td>p[0] = ([], p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Indicador de acceso de arreglo</td></tr>')
     
     def p_Array_2(p):
         '''
@@ -562,6 +594,7 @@ def analizeAST(entrada):
             | empty
         '''
         p[0] = None
+        log.append('<tr><td>ARRAY : []</td><td>p[0] = ([])</td><td>'+ str(p.lineno(0)) +'</td><td>Indicador de acceso a arreglo</td></tr>')
 
     def p_Var_List_1(p):
         '''
@@ -572,12 +605,14 @@ def analizeAST(entrada):
         dot.node(str(id), 'VAR_LIST')
         dot.edge(str(id), str(p[2]))
         dot.edge(str(id), str(p[3]))
+        log.append('<tr><td>VAR_LIST : , VAR_ITEM VAR_LIST</td><td>p[0] = (p[2], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Lista de variables</td></tr>')
 
     def p_Var_List_2(p):
         '''
         Var_List : empty
         '''
         p[0] = None
+        log.append('<tr><td>VAR_LIST : empty</td><td>p[0] = None</td><td>'+ str(p.lineno(0)) +'</td><td>Lista de variables vacia</td></tr>')
 
     def p_Var_Item(p):
         '''
@@ -588,6 +623,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'VAR_ITEM')
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[2]))
+        log.append('<tr><td>VAR_ITEM : POINTERS VAR</td><td>p[0] = (p[1], p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Variable con operador de puntero</td></tr>')
 
     def p_Mod(p):
         '''
@@ -602,6 +638,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'MOD')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>MOD : extern | static | register | auto | volatile | const</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Modificador de variable</td></tr>')
 
     # ===================================================================
     # Enumerations
@@ -617,6 +654,7 @@ def analizeAST(entrada):
         dot.edge(str(id), 'enum')
         dot.edge(str(id), str(p[2]))
         dot.edge(str(id), str(p[4]))
+        log.append('<tr><td>ENUM_DECL : enum name { ENUM_DEF } ;</td><td>p[0] = (enum,p[2], p[4])</td><td>'+ str(p.lineno(0)) +'</td><td>Enum</td></tr>')
 
     def p_Enum_Def_1(p):
         '''
@@ -627,6 +665,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'ENUM_DEF')
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[3]))
+        log.append('<tr><td>ENUM_DEF : ENUM_VAL , ENUM_DEF</td><td>p[0] = (p[1], p[2], p[3], p[4])</td><td>'+ str(p.lineno(0)) +'</td><td>Declaracion de elementos de enum</td></tr>')
 
     def p_Enum_Def_2(p):
         '''
@@ -636,6 +675,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'ENUM_DEF')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>ENUM : ENUM_VAL</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Declaracion de elemento de enum</td></tr>')
 
     def p_Enum_Val_1(p):
         '''
@@ -645,6 +685,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'ENUM_VAL')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>ENUM_VAL : name</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Elemento de enum</td></tr>')
 
     def p_Enum_Val_2(p):
         '''
@@ -656,6 +697,7 @@ def analizeAST(entrada):
         dot.edge(str(id), '=')
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[3]))
+        log.append('<tr><td>ENUM_VAL : name = INTEGER</td><td>p[0] = (0 ,p[1], p[3]</td><td>'+ str(p.lineno(0)) +'</td><td>Elemento de enum del tipo var=int</td></tr>')
 
     # ===================================================================
     # Types
@@ -670,6 +712,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'TYPE')
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[2]))
+        log.append('<tr><td>TYPE : BASE POINTERS</td><td>p[0] = (p[1], p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Tipo de variable</td></tr>')
 
     def p_Base_1(p):
         '''
@@ -680,6 +723,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'BASE')
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[2]))
+        log.append('<tr><td>BASE : SIGN ESCALAR</td><td>p[0] = (p[1], p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Signo y tipo primitivo de variable</td></tr>')
 
     def p_Base_2(p):
         '''
@@ -690,6 +734,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'BASE')
         dot.edge(str(id), 'struct')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>BASE : struct name</td><td>p[0] = (struct, p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Struct como tipo de variable</td></tr>')
 
     def p_Base_3(p):
         '''
@@ -700,6 +745,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'BASE')
         dot.edge(str(id), 'struct')
         dot.edge(str(id), str(p[3]))
+        log.append('<tr><td>BASE : struct { STRUCT_DEF }</td><td>p[0] = (struct_def, p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Definicion de struct como tipo de variable</td></tr>')
 
     def p_Base_4(p):
         '''
@@ -710,6 +756,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'BASE')
         dot.edge(str(id), 'union')
         dot.edge(str(id), str(p[2]))
+        log.append('<tr><td>BASE : union name</td><td>p[0] = (union, p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Union como tipo de variable</td></tr>')
 
     def p_Base_5(p):
         '''
@@ -720,6 +767,8 @@ def analizeAST(entrada):
         dot.node(str(id), 'BASE')
         dot.edge(str(id), 'union')
         dot.edge(str(id), str(p[3]))
+        log.append('<tr><td>BASE : union { STRUCT_DEF }</td><td>p[0] = (union_def, p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Definicion de union como tipo de variable</td></tr>')
+
 
     def p_Base_6(p):
         '''
@@ -730,6 +779,8 @@ def analizeAST(entrada):
         dot.node(str(id), 'BASE')
         dot.edge(str(id), 'enum')
         dot.edge(str(id), str(p[2]))
+        log.append('<tr><td>BASE : enum name</td><td>p[0] = (enum, p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Definicion de enum como tipo de variable</td></tr>')
+
 
     def p_Sign_1(p):
         '''
@@ -740,12 +791,15 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'SIGN')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>SIGN : signed  | unsigned</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Indicador si la variable tiene signo</td></tr>')
+
 
     def p_Sign_2(p):
         '''
         Sign : empty
         '''
         p[0] = None
+        log.append('<tr><td>SIGNED : empty</td><td>p[0] = None</td><td>'+ str(p.lineno(0)) +'</td><td>Sin signo</td></tr>')
 
     def p_Scalar(p):
         '''
@@ -761,6 +815,7 @@ def analizeAST(entrada):
         id = inc()
         dot.node(str(id), str(p[1]) )
         dot.edge(str(id-1), str(id))
+        log.append('<tr><td>SCALAR : int  | float  | double  | void</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Escalar (tipo) de variable</td></tr>')
 
     def p_Pointers_1(p):
         '''
@@ -771,12 +826,14 @@ def analizeAST(entrada):
         dot.node(str(id), 'POINTERS')
         dot.edge(str(id), str(p[1]))
         dot.edge(str(id), str(p[2]))
+        log.append('<tr><td>POINTERS : * POINTERS</td><td>p[0] = (*, p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Lista de * como punteros de variable</td></tr>')
 
     def p_Pointers_2(p):
         '''
         Pointers : empty
         '''
         p[0] = None
+        log.append('<tr><td>POINTERS : empty</td><td>p[0] = None</td><td>'+ str(p.lineno(0)) +'</td><td>Sin puntero</td></tr>')
 
     # ===================================================================
     # Statements
@@ -790,6 +847,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'PRINTF')
         dot.edge(str(id), str(p[4]))
+        log.append('<tr><td>STM : printf ( string ) PRINTF_PARAMS</td><td>p[0] = (printf, p[3], p[4])</td><td>'+ str(p.lineno(0)) +'</td><td>Funcion printf()</td></tr>')
 
     def p_Printf_Params_1(p):
         '''
@@ -800,6 +858,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'PRINTF_PARAMS')
         dot.edge(str(id), str(p[2]))
         dot.edge(str(id), str(p[3]))
+        log.append('<tr><td>PRINTF_PARAMS : , PRINTF_PARAM PRINTF_PARAM</td><td>p[0] = (p[2], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Lista de parametros de printf</td></tr>')
         
 
     def p_Printf_Params_2(p):
@@ -810,12 +869,14 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'PRINTF_PARAMS')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>PRINTF_PARAMS : PRINTF_PARAM</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Parametro de printf</td></tr>')
 
     def p_Printf_Params_3(p):
         '''
         Printf_Params : empty
         '''
         p[0] = 'NonePrintfParam'
+        log.append('<tr><td>PRINTF_PARAMS : empty</td><td>p[0] = None</td><td>'+ str(p.lineno(0)) +'</td><td>Sin parametro</td></tr>')
 
     def p_Printf_Param(p):
         '''
@@ -825,6 +886,8 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'PRINTF_PARAM')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>PRINTF_PARAM : OP_POINTER</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Valor parametro de printf</td></tr>')
+
 
     def p_Stm_01(p):
         '''
@@ -835,6 +898,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'SCANF')
         dot.edge(str(id), str(p[3]))
         dot.edge(str(id), str(p[5]))
+        log.append('<tr><td>STM : SCANF ( string , SCANF_PARAM ) ; </td><td>p[0] = (scanf,p[3], p[5])</td><td>'+ str(p.lineno(0)) +'</td><td>Funcion scanf</td></tr>')
 
     def p_Scanf_Param_1(p):
         '''
@@ -844,6 +908,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'SCANF_PARAM &')
         dot.edge(str(id), p[2])
+        log.append('<tr><td>SCANF_PARAM : & name</td><td>p[0] = (&, p[1])</td><td>'+ str(p.lineno(0)) +'</td><td>Parametro para scanf()</td></tr>')
 
     def p_Scanf_Param_2(p):
         '''
@@ -855,6 +920,7 @@ def analizeAST(entrada):
         id = inc()
         dot.node(str(id), p[1])
         dot.edge(str(p[0]), str(id))
+        log.append('<tr><td>SCANF_PARAM : name</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Parametro para scanf()</td></tr>')
 
 ########
 
@@ -866,6 +932,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'STM')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>STM : VAR_DECL</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Declaracion de variable</td></tr>')
         
     def p_Stm_2(p):
         '''
@@ -875,6 +942,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'STM')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>STM : NAME :</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Declaracion de etiqueta</td></tr>')
 
     def p_Stm_3(p):
         '''
@@ -886,6 +954,7 @@ def analizeAST(entrada):
         dot.edge(str(id), str(p[3]))
         dot.edge(str(id), str(p[5]))
         dot.edge(str(id), str(p[7]))
+        log.append('<tr><td>STM : if ( EXPR ) { THEN_STM } else { STM }</td><td>p[0] = (if, p[3], p[5], else, p[7])</td><td>'+ str(p.lineno(0)) +'</td><td>If-Else</td></tr>')
 
     def p_Stm_7(p):
         '''
@@ -896,6 +965,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'STM IF')
         dot.edge(str(id), str(p[3]))
         dot.edge(str(id), str(p[5]))
+        log.append('<tr><td>STM : if ( EXPR ) STM</td><td>p[0] = (if, p[3], p[5]</td><td>'+ str(p.lineno(0)) +'</td><td>If</td></tr>')
 
     def p_Stm_4(p):
         '''
@@ -906,6 +976,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'STM WHILE')
         dot.edge(str(id), str(p[3]))
         dot.edge(str(id), str(p[5]))
+        log.append('<tr><td>STM : while ( EXPR ) STM</td><td>p[0] = (while, p[3], p[5])</td><td>'+ str(p.lineno(0)) +'</td><td>While</td></tr>')
 
     def p_Stm_5(p):
         '''
@@ -918,6 +989,7 @@ def analizeAST(entrada):
         dot.edge(str(id), str(p[5]))
         dot.edge(str(id), str(p[7]))
         dot.edge(str(id), str(p[9]))
+        log.append('<tr><td>STM : for ( ARG ; ARG ; ARG ) STM</td><td>p[0] = (for, p[3], p[5], p[7])</td><td>'+ str(p.lineno(0)) +'</td><td>For</td></tr>')
     
     def p_Stm_6(p):
         '''
@@ -938,6 +1010,7 @@ def analizeAST(entrada):
         dot.edge(str(id), str(p[3]))
         dot.edge(str(id), str(p[5]))
         dot.edge(str(id), str(p[7]))
+        log.append('<tr><td>STM : VAR_DECL</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Declaracion de variable</td></tr>')
 
     def p_Then_Stm_2(p):
         '''
@@ -948,6 +1021,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'THEN_STM WHILE')
         dot.edge(str(id), str(p[3]))
         dot.edge(str(id), str(p[5]))
+        log.append('<tr><td>THEN_STM : while ( EXPR ) STM</td><td>p[0] = (while, p[3], p[5])</td><td>'+ str(p.lineno(0)) +'</td><td>While</td></tr>')
 
     def p_Then_Stm_3(p):
         '''
@@ -960,6 +1034,7 @@ def analizeAST(entrada):
         dot.edge(str(id), str(p[5]))
         dot.edge(str(id), str(p[7]))
         dot.edge(str(id), str(p[9]))
+        log.append('<tr><td>STM : for ( ARG ; ARG ; ARG ) STM</td><td>p[0] = (for, p[3], p[5], p[7])</td><td>'+ str(p.lineno(0)) +'</td><td>For</td></tr>')
 
     def p_Then_Stm_4(p):
         '''
@@ -979,6 +1054,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'NORMAL_STM DO WHILE')
         dot.edge(str(id), str(p[2]))
         dot.edge(str(id), str(p[5]))
+        log.append('<tr><td>NORMAL_STM : do STM while ( EXPR )</td><td>p[0] = (while, p[3], p[5])</td><td>'+ str(p.lineno(0)) +'</td><td>Do-while</td></tr>')
 
     def p_Normal_Stm_2(p):
         '''
@@ -989,6 +1065,7 @@ def analizeAST(entrada):
         dot.node(str(id), 'NORMAL_STM SWITCH')
         dot.edge(str(id), str(p[3]))
         dot.edge(str(id), str(p[6]))
+        log.append('<tr><td>NORMAL_STM : switch ( EXP ) { CASE_STM }</td><td>p[0] = (switch, p[3], p[6])</td><td>'+ str(p.lineno(0)) +'</td><td>Switch</td></tr>')
 
     def p_Normal_Stm_3(p):
         '''
@@ -1016,6 +1093,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'NORMAL_STM GOTO')
         dot.edge(str(id), str(p[2]))
+        log.append('<tr><td>NORMAL_STM : goto name ;</td><td>p[0] = (goto, p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Goto</td></tr>')
         
     def p_Normal_Stm_6(p):
         '''
@@ -1024,6 +1102,7 @@ def analizeAST(entrada):
         id = inc()
         p[0] = id
         dot.node(str(id), 'NORMAL_STM BREAK')
+        log.append('<tr><td>NORMAL_STM : break ;</td><td>p[0] = (break)</td><td>'+ str(p.lineno(0)) +'</td><td>Break</td></tr>')
 
     def p_Normal_Stm_7(p):
         '''
@@ -1032,6 +1111,7 @@ def analizeAST(entrada):
         id = inc()
         p[0] = id
         dot.node(str(id), 'NORMAL_STM CONTINUE')
+        log.append('<tr><td>NORMAL_STM : continue ;</td><td>p[0] = (conitue)</td><td>'+ str(p.lineno(0)) +'</td><td>Continue</td></tr>')
         
     def p_Normal_Stm_8(p):
         '''
@@ -1041,6 +1121,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'NORMAL_STM RETURN')
         dot.edge(str(p[0]), str(p[2]))
+        log.append('<tr><td>NORMAL_STM : return EXPR ;</td><td>p[0] = (return, p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Return</td></tr>')
 
     def p_Normal_Stm_9(p):
         '''
@@ -1058,6 +1139,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'ARG')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>ARG : EXPR</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Argumento</td></tr>')
 
     def p_Arg_2(p):
         '''
@@ -1141,6 +1223,7 @@ def analizeAST(entrada):
         p[0] = id
         dot.node(str(id), 'EXPR')
         dot.edge(str(id), str(p[1]))
+        log.append('<tr><td>OP_ASSIGN : OP1 OPERATOR OP2 ;</td><td>p[0] = (OPERATOR, p[1], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Operacion combinada de asignacion</td></tr>')
 
 
     def p_Op_Assign_1(p):
@@ -1150,6 +1233,7 @@ def analizeAST(entrada):
                     | Op_If AMINUS Op_Assign
                     | Op_If AMULTIPLY Op_Assign
                     | Op_If ADIVIDE Op_Assign
+                    | Op_If AREMAINDER Op_Assign
                     | Op_If AXOR Op_Assign
                     | Op_If AAND Op_Assign
                     | Op_If AOR Op_Assign
@@ -1159,6 +1243,8 @@ def analizeAST(entrada):
         id = inc()
         p[0] = id
         dot.node(str(id), 'OP_ASSIGN')
+        
+
         
         id=inc()
         dot.node(str(id), str(p[2]))
@@ -1193,7 +1279,7 @@ def analizeAST(entrada):
         dot.edge(str(p[0]), str(p[3]))
         #dot.edge(str(p[0]), str(p[id]))
         dot.edge(str(p[0]), str(p[5]))
-
+        log.append('<tr><td>OP_IF : OP_OR ? OP_IF : OP_IF ;</td><td>p[0] = (p[1], p[3], p[5])</td><td>'+ str(p.lineno(0)) +'</td><td>Operador ternario</td></tr>')        
 
 
 
@@ -1219,6 +1305,7 @@ def analizeAST(entrada):
         dot.edge(str(p[0]), str(p[1]))
         dot.edge(str(p[0]), str(id))
         dot.edge(str(p[0]), str(p[3]))
+        log.append('<tr><td>OP_OR : OP_OR || OP_AND</td><td>p[0] = (||, p[1], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Operacion ot</td></tr>')
 
     def p_Op_Or_2(p):
         '''
@@ -1242,6 +1329,7 @@ def analizeAST(entrada):
         dot.edge(str(p[0]), str(p[1]))
         dot.edge(str(p[0]), str(id))
         dot.edge(str(p[0]), str(p[3]))
+        log.append('<tr><td>OP_AND : OP_AND && OP_BINOR</td><td>p[0] = (&&, p[1], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Operacion and</td></tr>')
 
     def p_Op_And_2(p):
         '''
@@ -1265,6 +1353,8 @@ def analizeAST(entrada):
         dot.edge(str(p[0]), str(p[1]))
         dot.edge(str(p[0]), str(id))
         dot.edge(str(p[0]), str(p[3]))
+        log.append('<tr><td>OP_BINOR : OP_1 OPERATOR OP_2</td><td>p[0] = (|, p[1], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Operacion or binario</td></tr>')
+
 
     def p_Op_BinOR_2(p):
         '''
@@ -1274,6 +1364,8 @@ def analizeAST(entrada):
         p[0] = id 
         dot.node(str(id), 'OP_BIN_XOR')
         dot.edge(str(p[0]), str(p[1]))
+        log.append('<tr><td>OP_BIXOR : OP_1 OPERATOR OP_2</td><td>p[0] = (^, p[1], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Operacion xor binario</td></tr>')
+
 
     def p_Op_BinXOR_1(p):
         '''
@@ -1297,6 +1389,8 @@ def analizeAST(entrada):
         p[0] = id 
         dot.node(str(id), 'OP_BIN_AND')
         dot.edge(str(p[0]), str(p[1]))
+        
+
 
     def p_Op_BinAND_1(p):
         '''
@@ -1311,6 +1405,7 @@ def analizeAST(entrada):
         dot.edge(str(p[0]), str(p[1]))
         dot.edge(str(p[0]), str(id))
         dot.edge(str(p[0]), str(p[3]))
+        log.append('<tr><td>OP_BINAND : OP_1 OPERATOR OP_2</td><td>p[0] = (&, p[1], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Operacion and binario</td></tr>')
 
     def p_Op_BinAND_2(p):
         '''
@@ -1335,6 +1430,7 @@ def analizeAST(entrada):
         dot.edge(str(p[0]), str(p[1]))
         dot.edge(str(p[0]), str(id))
         dot.edge(str(p[0]), str(p[3]))
+        log.append('<tr><td>OP_EQUATE : OP_1 OPERATOR OP_2</td><td>p[0] = (|, p[1], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Operacion de comparacion == !=</td></tr>')
 
 
     def p_Op_Equate_2(p):
@@ -1362,6 +1458,9 @@ def analizeAST(entrada):
         dot.edge(str(p[0]), str(p[1]))
         dot.edge(str(p[0]), str(id))
         dot.edge(str(p[0]), str(p[3]))
+        log.append('<tr><td>OP_COMPARE : OP_1 OPERATOR OP_2</td><td>p[0] = (OPERATOR, p[1], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Operacion relacional</td></tr>')
+
+
 
     def p_Op_Compare_2(p):
         '''
@@ -1386,6 +1485,7 @@ def analizeAST(entrada):
         dot.edge(str(p[0]), str(p[1]))
         dot.edge(str(p[0]), str(id))
         dot.edge(str(p[0]), str(p[3]))
+        log.append('<tr><td>OP_SHIFT : OP_1 OPERATOR OP_2</td><td>p[0] = (OPERATOR, p[1], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Operacion de desplazamiento</td></tr>')
 
     def p_Op_Shift_2(p):
         '''
@@ -1410,6 +1510,7 @@ def analizeAST(entrada):
         dot.edge(str(p[0]), str(p[1]))
         dot.edge(str(p[0]), str(id))
         dot.edge(str(p[0]), str(p[3]))
+        log.append('<tr><td>OP_ADD : OP_1 OPERATOR OP_2</td><td>p[0] = (OPERATOR, p[1], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Operacion + -</td></tr>')
 
     def p_Op_Add_2(p):
         '''
@@ -1435,6 +1536,8 @@ def analizeAST(entrada):
         dot.edge(str(p[0]), str(p[1]))
         dot.edge(str(p[0]), str(id))
         dot.edge(str(p[0]), str(p[3]))
+        log.append('<tr><td>OP_MULT : OP_1 OPERATOR OP_2</td><td>p[0] = (OPERATOR, p[1], p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>Operacion * / %</td></tr>')
+
 
     def p_Op_Mult_2(p):
         '''
@@ -1459,6 +1562,8 @@ def analizeAST(entrada):
         id = inc()
         dot.node(str(id), p[1])
         dot.edge(str(p[0]), str(id))
+        log.append('<tr><td>OP_UNARY : OP_1 OPERATOR</td><td>p[0] = (OPERATOR, p[2])</td><td>'+ str(p.lineno(0)) +'</td><td>Operacion unaria</td></tr>')
+
 
     def p_Op_Unary_2(p):
         '''
@@ -1496,6 +1601,8 @@ def analizeAST(entrada):
         dot.node(str(id), p[1])
         dot.edge(str(p[0]), str(id))
         dot.edge(str(p[0]), str(p[4]))
+        log.append('<tr><td>OP_UNARY : ( TYPE ) OP_UNARY</td><td>p[0] = (type, p[4])</td><td>'+ str(p.lineno(0)) +'</td><td>Casteo</td></tr>')
+
 
     def p_Op_Unary_5(p):
         '''
@@ -1508,6 +1615,8 @@ def analizeAST(entrada):
         dot.node(str(id), p[1])
         dot.edge(str(p[0]), str(id))
         dot.edge(str(p[0]), str(p[3]))
+        log.append('<tr><td>OP_UNARY : sizeof( NAME )</td><td>p[0] = (sizeof, p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>funcion sizeof()</td></tr>')
+
 
     def p_Op_Unary_6(p):
         '''
@@ -1521,6 +1630,8 @@ def analizeAST(entrada):
         dot.edge(str(p[0]), str(id))
         dot.edge(str(p[0]), str(p[3]))
         dot.edge(str(p[0]), str(p[4]))
+        log.append('<tr><td>OP_UNARY : sizeof( NAME )</td><td>p[0] = (sizeof, p[3])</td><td>'+ str(p.lineno(0)) +'</td><td>funcion sizeof()</td></tr>')
+
 
     def p_Op_Unary_7(p):
         '''
@@ -1547,7 +1658,7 @@ def analizeAST(entrada):
         '''
         id = inc() #0
         p[0] = id 
-        dot.node(str(id), 'OP_POINTER ->')
+        dot.node(str(id), 'OP_POINTER :')
         dot.edge(str(p[0]), str(p[1]))
         dot.edge(str(p[0]), str(p[3]))
 
@@ -1581,6 +1692,8 @@ def analizeAST(entrada):
         id = inc() #0
         p[0] = id 
         dot.node(str(id), str(p[1]))
+        log.append('<tr><td>VALUE : integer | string | character | decimal | name</td><td>p[0] = p[1]</td><td>'+ str(p.lineno(0)) +'</td><td>Valor</td></tr>')
+
 
     def p_Value_2(p):
         '''
@@ -1619,7 +1732,15 @@ def analizeAST(entrada):
         p[0] = None
 
     def p_error(p):
-        pass
+        if p:
+            print("Error sintáctico en el token =", p.type, 'L:', p.lineno)
+            # Just discard the token and tell the parser it's okay.
+            error = Error('Error en el token '+ str(p.type), str(p.lineno), 0)
+            syntacticErrors.add(error)
+            parser.errok()
+        else:
+            error = Error('Error al final del archivo', 0, 0)
+            syntacticErrors.add(error)
 
       
 
@@ -1636,7 +1757,33 @@ def analizeAST(entrada):
 
     tree = pydotplus.graph_from_dot_data(newDotFile)
     #print(dot.source)
-    tree.write_pdf('AST.pdf')
+    tree.write_pdf('Reporte_AST.pdf')
+
+    # Reporte gramatical
+    dotDataReport = 'digraph{tbl[shape=plaintext\nlabel=<<table><tr><td colspan=\'4\'>Reporte gramatical</td></tr>'
+    dotDataReport = dotDataReport + '<tr><td>Produccion</td><td>Acciones</td><td>Linea</td><td>Descripcion</td></tr>'
+    for x in reversed(log):
+        dotDataReport = dotDataReport + x + '\n'
+    dotDataReport = dotDataReport + '</table>>];}'
+
+    reportGraph = pydotplus.graph_from_dot_data(dotDataReport)
+    reportGraph.write_pdf('Reporte_gramatical.pdf')
+
+
+    # Errores léxicos y sintácticos
+    dotDataErrors = 'digraph{tbl[shape=plaintext\nlabel=<<table><tr><td colspan=\'3\'>Reporte de errores</td></tr>'
+    dotDataErrors += '<tr><td>Error</td><td>Tipo</td><td>Linea</td></tr>'
+    for e in lexicalErrors.errors:
+        dotDataErrors += '<tr><td>'+str(e.value)+'</td><td>Léxico</td><td>'+str(e.line)+'</td></tr>'
+
+    for e in syntacticErrors.errors:
+        dotDataErrors += '<tr><td>'+str(e.value)+'</td><td>Sintáctico</td><td>'+str(e.line)+'</td></tr>'
+
+    dotDataErrors += '</table>>];}'
+
+    errorGraph = pydotplus.graph_from_dot_data(dotDataErrors)
+    errorGraph.write_pdf('Reporte_Errores_LS.pdf')
+
     
     ast = parser.parse(entrada)
 

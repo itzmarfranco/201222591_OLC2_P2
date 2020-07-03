@@ -1,0 +1,7 @@
+char greeting[] = "Hello";
+int b = sizeof(int);
+int main(){
+	sizeof(int);
+	sizeof(float);
+	sizeof(char);
+}

@@ -27,8 +27,6 @@ ts_debug=TS.TablaDeSimbolos()
 no_instruccion=0
 ejecucion_automatica=1
 
-
-
 def font_resaltar():
     editor_font2 = Font(family="Helvetica", size=10, weight="normal" )
     editor.tag_config('reservada', foreground="#b93507",font=editor_font2)
@@ -116,21 +114,27 @@ def pintar_TS_IDE():
 
 
 def ejec_ascendente():
-    cont = editor.get("1.0",END)
-    
-    ast = analize(cont)
-    analizeAST(cont)
-    translate(ast)
 
-    
-    '''
+    cont1 = editor.get("1.0",END)
+    ast = analize(cont1)
+    if ast != None:
+        analizeAST(cont1)
+        fileAugus = translate(ast)
+
+        file1 = open('un-optimized.augus', 'w')
+        file1.write(fileAugus)
+        file1.close()
+    else:
+        fileAugus = ''
+
+
     global ts_debug, no_instruccion, waitForCommand, ejecucion_automatica
     ejecucion_automatica=1
     cont=editor.get("1.0",END)
     waitForCommand=0
     Inter.inicializarGUI(editor,consola)
     Inter.limpiarValores()
-    Inter.inicializarEjecucionAscendente(cont)
+    Inter.inicializarEjecucionAscendente(fileAugus)
     Inter.inicializarTS()
     i=0
     while i<len(Inter.instrucciones):
@@ -155,7 +159,8 @@ def ejec_ascendente():
                 MessageBox.showinfo("Finalizado","Ultima instruccion ejecutada.")
         i=i+1
     #Inter.generarReportes()
-    '''
+
+
 
 def continuar_ejecucionAsc():
     global no_instruccion, waitForCommand

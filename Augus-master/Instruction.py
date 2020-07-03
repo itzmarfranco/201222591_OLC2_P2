@@ -6,7 +6,13 @@ class printf(Instruction):
 
     def __init__(self, string, parameters):
         self.string = string
-        self.parameters = parameters
+        auxP = []
+        if parameters != None:
+            for p in parameters:
+                if p != None: auxP.append(p)
+        else:
+            pass
+        self.parameters = auxP
 
 class scanf(Instruction):
 
@@ -198,6 +204,12 @@ class Goto(Instruction):
 
     def __init__(self, ret):
         self.ret = ret
+
+class Sizeof(Instruction):
+
+    def __init__(self, varType):
+        self.varType = varType[0][1]
+        print(self.varType)
 
 class Label(Instruction):
 

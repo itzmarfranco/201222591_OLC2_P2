@@ -18,19 +18,18 @@ from Expression import *
 import math
 
 
-
 lexicalErrors = ErrorList([])
 syntacticErrors = ErrorList([])
-semanticErrors = ErrorList([])
+
 caseList = [] #list for cases
 
 
 def analize(entrada):
-    
+
     # clear previous results
     lexicalErrors.clear()
     syntacticErrors.clear()
-    semanticErrors.clear()
+    # semanticErrors.clear()
     caseList.clear()
 
     reserved = {
@@ -257,9 +256,11 @@ def analize(entrada):
         
     # Skip the current token and output 'Illegal characters' using the special Ply t_error function.
     def t_error(t):
+        global lexicalErrors
         #print("Illegal characters!")
         t.lexer.skip(1)
         error = Error('Caracter no permitido: '+ str(t.value[0]), t.lineno,0)
+        print('Error léxico. Caracter no permitido: '+ str(t.value[0]), t.lineno)
         lexicalErrors.add(error)
 
     #var for the gram report
@@ -1016,7 +1017,7 @@ def analize(entrada):
             | Op_If ASHIFT_L Op_Assign
         '''
         #p[0] = (p[2], p[1], p[3])
-        p[0] = AssignOperation(p[1], p[3] ,p[2])
+        p[0] = AssignOperation(p[1], p[3] ,p[2])        
 
     def p_Op_Assign_2(p):
         '''
@@ -1043,6 +1044,7 @@ def analize(entrada):
         '''
         #p[0] = ('||', p[1], p[3])
         p[0] = LogicalOperation(p[1], p[3], p[2])
+        
 
     def p_Op_Or_2(p):
         '''
@@ -1056,6 +1058,7 @@ def analize(entrada):
         '''
         #p[0] = ('&&', p[1], p[3])
         p[0] = LogicalOperation(p[1], p[3], p[2])
+    
 
     def p_Op_And_2(p):
         '''
@@ -1126,6 +1129,7 @@ def analize(entrada):
         '''
         #p[0] = (p[2], p[1], p[3])
         p[0] = RelationalOperation(p[1], p[3], p[2])
+        
 
     def p_Op_Compare_2(p):
         '''
@@ -1140,6 +1144,7 @@ def analize(entrada):
         '''
         #p[0] = (p[2], p[1], p[3])
         p[0] = ShiftOperation(p[1], p[3], p[2])
+        
 
     def p_Op_Shift_2(p):
         '''
@@ -1154,6 +1159,7 @@ def analize(entrada):
         '''
         #p[0] = (p[2], p[1], p[3])
         p[0] = ArithmeticOperation(p[1], p[3], p[2])
+        
 
     def p_Op_Add_2(p):
         '''
@@ -1214,7 +1220,8 @@ def analize(entrada):
         '''
         Op_Unary : SIZEOF L_PAR Type R_PAR
         '''
-        p[0] = ('sizeof', p[3]) # SUPPORTED BY AUGUS? 
+        #p[0] = ('sizeof', p[3]) # SUPPORTED BY AUGUS? 
+        p[0] = Sizeof(p[3])
 
     def p_Op_Unary_6(p):
         '''
@@ -1317,17 +1324,35 @@ def analize(entrada):
 
 
     def p_error(p):
+        global syntacticErrors
         if p:
-            print("Error sintáctico en el token =", p.type, 'L:', p.lineno)
+            print("Error sintáctico. No se esperaba el token =", p.type, 'L:', p.lineno)
             # Just discard the token and tell the parser it's okay.
             error = Error('Error en el token '+ str(p.type), str(p.lineno), 0)
+            syntacticErrors.add(error)
             parser.errok()
         else:
             error = Error('Error al final del archivo', 0, 0)
-            pass
-        syntacticErrors.add(error)
+            syntacticErrors.add(error)
+
+        
 
        
+    
+    # Errores léxicos y sintácticos
+    # dotDataErrors = 'digraph{tbl[shape=plaintext\nlabel=<<table><tr><td colspan=\'3\'>Reporte de errores</td></tr>'
+    # dotDataErrors = dotDataErrors + '<tr><td>Error</td><td>Tipo</td><td>Linea</td></tr>'
+    # for e in lexicalErrors.errors:
+    #     dotDataErrors += '<tr><td>'+str(e.value)+'</td><td>Léxico</td><td>'+str(e.line)+'</td></tr>'
+
+    # for e in syntacticErrors.errors:
+    #     dotDataErrors += '<tr><td>'+str(e.value)+'</td><td>Sintáctico</td><td>'+str(e.line)+'</td></tr>'
+
+    # dotDataErrors = dotDataErrors + '</table>>];}'
+
+    # errorGraph = pydotplus.graph_from_dot_data(dotDataErrors)
+    # errorGraph.write_pdf('Reporte_Errores_LS.pdf')
+    
 
     #from .ply import yacc as yacc
     import ply.yacc as yacc
